@@ -1,0 +1,137 @@
+#==============================================================================
+# ▼ TIBB Menu Status Screen ver. 1.01
+# - Engine: RPG Maker Ace
+# - Last Updated: 2015.09.02
+# - Requires: n/a
+# - Terms of Use:  Free to use commercially or non-commercially with credit
+#      to The Infamous Bon Bon.
+# - Find Me @: https://ccrgeek.wordpress.com/ or http://forums.rpgmakerweb.com/
+#==============================================================================
+
+$imported = {} if $imported.nil?
+$imported["TIBB-MenuStatusScreen"] = true
+
+#==============================================================================
+# ▼ Updates
+# -----------------------------------------------------------------------------
+# 2012.09.02 - Added $imported method.
+#==============================================================================
+#==============================================================================
+# ** Introduction
+# -----------------------------------------------------------------------------
+# It has been modified to scale with party size, include TP and draw the actors
+# character sprite instead of face.  The actor information was slimmed down so
+# up to 8 can be seen on the screen, especially useful for games with large
+# battle parties or if you don't use face graphics.
+#==============================================================================
+#==============================================================================
+# ▼ Instructions
+# -----------------------------------------------------------------------------
+# None
+#==============================================================================
+#==============================================================================
+# ▼ Compatibility
+# -----------------------------------------------------------------------------
+# Overwritten methods:
+#   class Window_MenuStatus - Get Item Height
+#   class Window_MenuStatus - Draw Item
+#   class Window_MenuStatus - Draw Simple Status
+#   class Window_MenuStatus - Draw Name
+#   class Window_MenuStatus - Draw State and Buff/Debuff Icons
+#   class Window_MenuStatus - Draw Actor Walking Graphic
+#   class Window_MenuStatus - Draw Character Graphic
+# Aliased methods:
+#   none
+#==============================================================================
+
+#==============================================================================
+# ** Window_MenuStatus
+#------------------------------------------------------------------------------
+#  This window displays party member status on the menu screen.
+#==============================================================================
+class Window_MenuStatus < Window_Selectable
+  #--------------------------------------------------------------------------
+  # --Overwrite Method--
+  # * Get Item Height
+  #--------------------------------------------------------------------------
+  def item_height
+    value = [$game_party.members.size,8].min
+    (height - standard_padding * 2) / value
+  end
+  #--------------------------------------------------------------------------
+  # --Overwrite Method--
+  # * Draw Item
+  #--------------------------------------------------------------------------
+  def draw_item(index)
+    actor = $game_party.members[index]
+    enabled = $game_party.battle_members.include?(actor)
+    rect = item_rect(index)
+    draw_item_background(index)
+    draw_actor_basic_status(actor, rect.x, rect.y, enabled)
+  end
+  #--------------------------------------------------------------------------
+  # --Overwrite Method--
+  # * Draw Simple Status
+  #--------------------------------------------------------------------------
+  def draw_actor_basic_status(actor, x, y, enabled)
+    contents.font.size = 20
+    y_mod = line_height
+    draw_actor_graphic(actor, x + 32, y + 36, enabled)
+    draw_actor_name(actor, x, y + y_mod + 4, 64)
+    draw_actor_level(actor, x + 80, y)
+    draw_actor_icons(actor, x + 306, y)
+    draw_actor_class(actor, x + 80, y + y_mod, 64)
+    draw_actor_hp(actor, x + 160, y)
+    draw_actor_mp(actor, x + 160, y + y_mod - 2, 60)
+    draw_actor_tp(actor, x + 224, y + y_mod - 2, 60)
+  end
+  #--------------------------------------------------------------------------
+  # --Overwrite Method--
+  # * Draw Name
+  #--------------------------------------------------------------------------
+  def draw_actor_name(actor, x, y, width = 112)
+    change_color(hp_color(actor))
+    draw_text(x, y, width, line_height, actor.name, 1)
+  end
+  #--------------------------------------------------------------------------
+  # --Overwrite Method--
+  # * Draw State and Buff/Debuff Icons
+  #--------------------------------------------------------------------------
+  def draw_actor_icons(actor, x, y, width = 96)
+    icons = (actor.state_icons + actor.buff_icons)[0, width / 24]
+    icons.each_with_index do |n, i|
+      if i < 2  
+      draw_icon(n, x + 25 * i, y)
+      else
+      draw_icon(n, x + 25 * (i - 2), y + line_height)
+      end
+    end
+  end
+  #--------------------------------------------------------------------------
+  # --Overwrite Method--
+  # * Draw Actor Walking Graphic
+  #--------------------------------------------------------------------------
+  def draw_actor_graphic(actor, x, y, enabled)
+    draw_character(actor.character_name, actor.character_index, x, y, enabled)
+  end
+  #--------------------------------------------------------------------------
+  # --Overwrite Method--
+  # * Draw Character Graphic
+  #--------------------------------------------------------------------------
+  def draw_character(character_name, character_index, x, y, enabled)
+    return unless character_name
+    bitmap = Cache.character(character_name)
+    sign = character_name[/^[\!\$]./]
+    if sign && sign.include?('$')
+      cw = bitmap.width / 3
+      ch = bitmap.height / 4
+    else
+      cw = bitmap.width / 12
+      ch = bitmap.height / 8
+    end
+    n = character_index
+    src_rect = Rect.new((n%4*3+1)*cw, (n/4*4)*ch, cw, ch)
+    contents.blt(x - cw / 2, y - ch, bitmap, src_rect, 
+                    enabled ? 255 : translucent_alpha)
+  end
+end #class Window_MenuStatus < Window_Selectable
