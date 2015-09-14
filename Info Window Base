@@ -1,0 +1,2103 @@
+#==============================================================================
+# ▼ Info Window Base ver. 1.00
+# - Engine: RPG Maker Ace
+# - Created: 2015.09.12
+# - Requires: TIBB Menu Base 1.01
+# - Terms of Use:  Free to use commercially or non-commercially with credit
+#      to The Infamous Bon Bon.
+# - Find Me @: https://ccrgeek.wordpress.com/ or http://forums.rpgmakerweb.com/
+#==============================================================================
+
+$imported = {} if $imported.nil?
+$imported["TIBB-InfoWindowBase"] = true
+
+#==============================================================================
+# ▼ Updates
+# -----------------------------------------------------------------------------
+# None
+#==============================================================================
+#==============================================================================
+# ▼ Introduction
+# -----------------------------------------------------------------------------
+# The primary function of this script in conjunction with other scripts is to
+# display all most all the information you can enter in the database.
+#
+# Since you may not want players to see all this information for various reasons
+# (some of it you don't plan to use or something), the configuration allows you
+# to hide some info.
+#
+# This script does nothing on its own.
+#
+# This is a base script for use with the scripts:  Info Shop Screen, Info Item
+# Screen, Info Skill Screen, and Data Screen.  The methods are all very similar
+# for all of these and trying to put the necessary methods in each would have 
+# made all of them quite big and the configuration would have repeated among
+# them resulting in lots of unnecessary configuring on the game designer's part.
+#
+# Most of the default Vocab is set to match up with the database lexicon, 
+# so you can figure out what is what.
+#==============================================================================
+#==============================================================================
+# ▼ Instructions
+# -----------------------------------------------------------------------------
+# Edit the settings in the module below as you see fit.
+#==============================================================================
+#==============================================================================
+# ▼ Compatibility
+# -----------------------------------------------------------------------------
+# Overwritten methods:
+#   None
+# Aliased methods:
+#   None
+#
+# The only anicipated problems would be if another script you are using,
+# utilizes the same terminology for the Vocab module, or if another script
+# uses Window_Info as a class name.
+#==============================================================================
+
+#==============================================================================
+# ** Vocab
+#------------------------------------------------------------------------------
+#  This module defines terms and labels used in the Info Windows scripts.
+#==============================================================================
+module Vocab
+  #----------------------------------------------------------------------------
+  # * Title Text Vocab
+  #----------------------------------------------------------------------------
+  def self.usable_general_title; "General Info"; end
+  def self.usable_damage_title; "Variable Dmg/Rec Effect"; end
+  def self.usable_effects_title; "Effects"; end
+  def self.usable_effects_title_alt; "Additional Effects"; end
+  def self.equip_general_title; "General Info"; end
+  def self.equip_parameter_title; "Parameter Bonuses"; end
+  def self.base_features_title; "Features"; end
+  #----------------------------------------------------------------------------
+  # * Base Vocab
+  # These are used by a lot of the different windows.
+  #----------------------------------------------------------------------------
+  def self.base_special_note_label; "Note";   end
+  def self.base_id_label;           "ID";     end
+  def self.base_name_label;         "Name";   end
+  def self.buy_price_label;         "Price";  end
+  #----------------------------------------------------------------------------
+  # * Feature Vocab
+  # These are used by a lot of the different windows as well.
+  #----------------------------------------------------------------------------
+  # Feature Labels - excluding X & S Parameters, N Param Rates, names of States,
+  # and Elements which are defined in TIBB Menu Base
+  def self.feature(feature_code)
+    case feature_code
+    when 11; "Vs. Element"              # Element Rate
+    when 12; "Vs. Debuff"               # Debuff Rate
+    when 13; "Vs. State"                # State Rate
+    when 14; "Nullify State"            # State Resist   
+    when 31; "Atk Element"              # Atk Element
+    when 32; "Atk State"                # Atk State
+    when 33; "Atk Speed"                # Atk Speed
+    when 34; "Additional Attacks"       # Atk Times+
+    when 41; "Add Skill Type"           # Add Skill Type
+    when 42; "Seal Skill Type"          # Disable Skill Type
+    when 43; "Learn Skill"              # Add Skill
+    when 44; "Seal Skill"               # Disable Skill
+    when 51; "Equip Weapon Type"        # Equip Weapon
+    when 52; "Equip Armor Type"         # Equip Armor 
+    when 53; "Lock Equip Type"          # Lock Equip
+    when 54; "Seal Equip Type"          # Seal Equip
+    when 55; "Change Equip Type"        # Slot Type - Dual Wield
+    when 61; "Additional Actions"       # Action Times+
+    when 62; "Special"                  # Special Flag
+    when 63; "Collapse Effect"          # Collapse Effect
+    when 64; "Party Ability"            # Party Ability
+    else; return ""; end
+  end
+  # Feature - Change Equip Type
+  def self.change_equip_type; "Dual Wield"; end
+  # Feature - Special Flag
+  def self.special_flag(data_id)
+    case data_id
+    when 0; "Auto Battle"               # Auto Battle
+    when 1; "Guard"                     # Guard
+    when 2; "Protect Ally"              # Substitute
+    when 3; "Preserve " + self.tp_a     # Preserve TP
+    else; return ""; end
+  end
+  # Feature - Collapse Type
+  def self.collapse_type(data_id)
+    case data_id
+    when 0; "Boss"                      # Boss
+    when 1; "Instant"                   # Instant
+    when 2; "No Disappear"              # Not Disappear
+    else; return ""; end
+  end
+  # Feature - Party Ability
+  def self.party_ability(data_id)
+    case data_id
+    when 0; "Half Encounters"                           # Encounter Half
+    when 1; "No Encounters"                             # Encounter None
+    when 2; "No Surprise"                               # Cancel Surprise
+    when 3; "Up Preemptive Strike"                      # Raise Preemptive
+    when 4; "Double " + self.currency_unit + " Earned"  # Gold Double
+    when 5; "Double Drop Rate"                          # Drop Item Double
+    else; return ""; end
+  end
+  #----------------------------------------------------------------------------
+  # * Equip Vocab
+  # These apply to items found in the Weapons and Armor Tabs of the database.
+  #----------------------------------------------------------------------------
+  def self.combined_equip_suffix; "Type"; end
+  def self.performance_label;     "Performance"; end
+  #----------------------------------------------------------------------------
+  # * Usable Vocab
+  # These apply to items found in the Items and Skills Tabs of the database.
+  #----------------------------------------------------------------------------
+  def self.usable_dmg_variance_label; "Variance"; end
+  def self.usable_dmg_element_label; "Element"; end
+  def self.usable_speed_label;       "Speed"; end
+  def self.usable_success_label;     "Success %"; end
+  def self.usable_repeats_label;     "# of Hits"; end
+  def self.usable_tp_gain_label;     "User " + self.tp_a + " Gain"; end
+  # Scope
+  def self.usable_scope_label;   "Target";     end
+  def self.scope(value)
+    case value
+    when 0; "None"
+    when 1; "One Enemy"
+    when 2; "All Enemies"
+    when 3; "One Random Enemy"
+    when 4; "2 Random Enemies"
+    when 5; "3 Random Enemies"
+    when 6; "4 Random Enemies"
+    when 7; "One Ally"
+    when 8; "All Allies"
+    when 9; "One Ally (Dead)"
+    when 10;"All Allies (Dead)"
+    when 11;"The User"
+    else;""
+    end
+  end
+  # Occasion
+  def self.usable_occasion_label; "Occasion"; end
+  def self.occasion(value)
+    case value
+    when 0; "Always"
+    when 1; "Battle Only"
+    when 2; "Field Only"
+    when 3; "Special"
+    end
+  end
+  # Damage Type
+  def self.usable_damage_type_label; "Type"; end
+  def self.dmg_type(value)
+    case value
+      when 0; "None"
+      when 1; self.hp_a + " Damage"
+      when 2; self.mp_a + " Damage"
+      when 3; self.hp_a + " Recover"
+      when 4; self.mp_a + " Recover"
+      when 5; self.hp_a + " Drain"
+      when 6; self.mp_a + " Drain"
+    end
+  end
+  # Damage Critical
+  def self.usable_dmg_crit_label; "Can Critical?"; end
+  def self.crit(value)
+    case value
+      when true;  "Yes"
+      when false; "No"
+    end
+  end
+  # Damage Formula
+  def self.usable_dmg_formula_label; "Dmg/Rec Factors"; end
+  def self.formula_user;             "User's"; end
+  def self.formula_target;           "Target's"; end
+  # Hit Type
+  def self.usable_hit_type_label;    "Hit Type"; end
+  def self.hit_type(value)
+    case value
+      when 0; "Certain Hit"
+      when 1; "Physical"
+      when 2; "Magical"
+    end
+  end  
+  # Effects Labels
+  def self.effects(effects_code)
+    case effects_code
+    when 11; self.hp_a + " Change"      # HP Recovery
+    when 12; self.mp_a + " Change"      # MP Recovery
+    when 13; self.tp_a + " Change"      # TP Gain
+    when 21; "Add State"                # Add State
+    when 22; "Remove State"             # Remove State
+    when 31; "Add Buff"                 # Add Buff
+    when 32; "Add Debuff"               # Add Debuff
+    when 33; "Remove Buff"              # Remove Buff
+    when 34; "Remove Debuff"            # Remove Debuff
+    when 41; "Special"                  # Special Effect
+    when 42; "Raise Parameter"          # Raise Parameter
+    when 43; "Learn Skill"              # Learn Skill
+    when 44; "Special"                  # Common Events
+    else; return ""; end
+  end
+  # Effect - Add Buff and Add Debuff
+  def self.add_buff_suffix; " Turns"; end
+  #----------------------------------------------------------------------------
+  # * Item Vocab
+  # These apply to items found only in the Items Tab of the database.
+  #----------------------------------------------------------------------------
+  # Item Type
+  def self.item_type_label; "Type"; end
+  def self.item_type(value)
+    case value
+      when 1;  text1 = "Normal"
+      when 2;  text1 = "Key Item"
+    end
+  end
+  # Item Consume
+  def self.item_consume_label;  "Consumability"; end
+  def self.consume(value)
+    case value
+      when true;  "One Use"
+      when false; "Reusable"
+    end
+  end
+  #----------------------------------------------------------------------------
+  # * Skill Vocab
+  # These apply to items found only in the Skills Tab of the database.
+  #----------------------------------------------------------------------------
+  def self.stype_id_label;  "Type"; end
+  def self.tp_cost_label;   self.tp_a + " Cost"; end
+  def self.mp_cost_label;   self.mp_a + " Cost"; end
+  def self.req_wtype_label; "Req. Weapon Type"; end
+end #module Vocab
+#==============================================================================
+# ** Config
+#------------------------------------------------------------------------------
+# Here you can change various setting in the Info Windows
+#==============================================================================
+module TIBB
+  module Config
+    #--------------------------------------------------------------------------
+    # * Usable General Block
+    # Applies to Skills and Items.  The Info Window is drawn in order and when
+    # it runs out of room, it stops, so its best to put things in order of 
+    # priority and/ or eliminate things that you feel are unnecessary. To
+    # eliminate a line just add a '#' in front to comment it out.  Cut and paste
+    # lines to change the order (but don't forget the comma at the end).  You
+    # can use ':empty_space' to draw a blank line anywhere you desire.
+    # ':special_note' is explained further in the Config module.
+    #--------------------------------------------------------------------------
+    UsableGeneral = [
+    :general_usable_title,
+    #:name,
+    #:id,
+    #:skill_type,           # Applies only to Skills
+    #:item_type,            # Applies only to Items
+    :in_inventory,          # Applies only to Items
+    :price,                 # Applies only to Items
+    :item_consumability,    # Applies only to Items
+    #:skill_cost,           # Applies only to Skills
+    :required_weapon_type,  # Applies only to Skills
+    :occasion,
+    :scope,
+    :hit_type,
+    :repeats,
+    :success_rate,
+    :speed,
+    :tp_gain,
+    #:special_note,
+    #:empty_space,
+    ] # Removing this would be bad
+    #--------------------------------------------------------------------------
+    # * Usable Damage Block
+    # Applies to Skills and Items.  If 'DrawDamageIfNone = false' then the
+    # block will not draw if Damage Type is None.  If true it will draw it
+    # no matter what.  By keeping it false you allow more room for Usable
+    # Effects when there is no damage.
+    #--------------------------------------------------------------------------
+    DrawDamageIfNone = false
+    UsableDamage = [
+    :damage_title,
+    :damage_type,
+    :damage_element,
+    :damage_formula,
+    :damage_variance,
+    :damage_critical,
+    #:empty_space,
+    ] # Removing this would be bad
+    #--------------------------------------------------------------------------
+    # * Usable Damage Block
+    # Applies to Skills and Items.
+    #--------------------------------------------------------------------------
+    UsableEffects = [
+    :effects_title,
+    :hp_recovery,
+    :mp_recovery,
+    :tp_recovery,
+    :add_state,
+    :remove_state,
+    :add_buff,
+    :add_debuff,
+    :remove_buff,
+    :remove_debuff,
+    :special_effect,
+    :grow_parameter,
+    :learn_skill,
+    #:empty_space,
+    ] # Removing this would be bad
+    #--------------------------------------------------------------------------
+    # * Equipment General Block
+    # Applies to Weapons and Armors.
+    #--------------------------------------------------------------------------
+    # Set number of actor shown with stat change in weapon and armor Info
+    # Windows.  Can be set to "all", "battle"(the max number of battle members),
+    # or any number (without "")
+    EquipMem = "all"
+    # Set number of actor shown per line in weapon and armor Info Windows.
+    EquipMemPerLine = 5 # Recommend 6 or less
+    # This allows you to adjust what parameter (the number being th e param id)
+    # is shown in comparison to current equip, over the character image in
+    # equipment windows.
+    EquipParamStandardWeapon = 2
+    EquipParamShield = 3
+    EquipParamHead = 5
+    EquipParamBody = 3
+    EquipParamAccess = 4
+    EquipParamDefault = 3 # Just in case a script adds new slot types
+    # This allows you to set special weapon types that compare different values,
+    # format is [weapon type ID, parameter ID]
+    EquipParamSpecialWeaponType1 = [2,6]
+    EquipParamSpecialWeaponType2 = [9,4]
+    # Set if the Normal Parameters show in Equipment when they are zero
+    HideZeroNParam = false
+    # This allows you to adjust the number of columns used in the parameters 
+    # block.
+    NParameterColumnMax = 2
+    # Change the order of and which lines show in Equipment General.
+    EquipmentGeneral = [
+    :general_equip_title,
+    #:name,
+    #:id,
+    :equip_type,
+    :in_inventory,
+    :price,
+    :performance,
+    #:special_note,
+    :actor_image_with_param_change,
+    :parameter_bonuses_title,
+    :parameter_bonuses,
+    #:empty_space,
+    ] # Removing this would be bad
+    #--------------------------------------------------------------------------
+    # * Features Block
+    # Applies to Weapons and Armors and if using Data Screen script, Enemies,
+    # State, and Class.
+    #--------------------------------------------------------------------------
+    BaseFeatures = [
+    :feature_title,
+    :nparam_rate,
+    :xparam_rate,
+    :sparam_rate,
+    :element_rate,
+    :defuff_rate,
+    :state_rate,
+    :state_resist,
+    :attack_element,
+    :attack_state,
+    :attack_speed,
+    :attack_times,
+    :add_skill_type,
+    :disable_skill_type,
+    :add_skill,
+    :disable_skill,
+    :add_weapon_type,
+    :add_armor_type,
+    :lock_equipment,
+    :seal_equipment,
+    :change_equipment_slot,
+    :action_times,
+    :special_flag,
+    :collapse_effect,
+    :party_ability,
+    #:empty_space,
+    ] # Removing this would be bad
+  end #module Config
+end #module TIBB
+#**** See Draw Special Note below if you think you might want to use that. ****#
+#==============================================================================
+# ** Window_Info
+#------------------------------------------------------------------------------
+#  This window displays info from the database for Weapons, Armor, Items, 
+#   and Skills.
+#==============================================================================
+class Window_Info < Window_Base
+  #----------------------------------------------------------------------------
+  # * Draw Special Note
+  # Here you can add methods for adding notes for special items, equipment, etc.
+  # Requires some scripting knowledge.  Example commented out.
+  #----------------------------------------------------------------------------
+  def draw_base_special_note(x, y, width)
+    return if @@ln == info_ln_max
+    show_label = false
+    change_color(normal_color)
+    # Add Here ---------------------------------------------------------------
+#~     if @item == $data_items[1]
+#~       text = "It worked?"
+#~       draw_text(x, y + @@fs * @@ln, width, line_height, text, 2)
+#~       show_label = true
+#~     end
+    #-------------------------------------------------------------------------
+    if show_label
+      change_color(system_color)
+      draw_text(x, y + @@fs * @@ln, width, line_height, 
+                Vocab::base_special_note_label)
+      @@ln += 1; end
+  end
+#^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^#
+#   * Page Layout Methods
+#^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^#
+  #--------------------------------------------------------------------------
+  # * Draw Usable Information
+  # aka Skills and Items
+  #--------------------------------------------------------------------------
+  def draw_usable_info(x, y, width)
+    if @page_index == 0
+      draw_usable_general(x, y, width)
+    elsif @page_index == 1
+      if TIBB::Config::DrawDamageIfNone
+        draw_usable_damage(x, y, width)
+      else; if @@ref[@item.id].damage.type != 0
+        draw_usable_damage(x, y, width); end
+      end
+      draw_usable_effects(x, y, width)
+    end
+  end
+  #--------------------------------------------------------------------------
+  # * Draw Equipment Information
+  #--------------------------------------------------------------------------
+  def draw_equip_info(x, y, width)
+    if @page_index == 0
+      draw_equip_general(x, y, width)
+    elsif @page_index == 1
+      draw_base_features(x, y, width)
+    end    
+  end
+#^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^#
+#   * Basic Structure Methods
+#^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^#
+  #--------------------------------------------------------------------------
+  # * Public Instance Variables
+  #--------------------------------------------------------------------------
+  attr_reader   :item_window      #Item Window
+  #--------------------------------------------------------------------------
+  # * Object Initialization
+  #--------------------------------------------------------------------------
+  def initialize(x, y, width, height)
+    super(x, y, width, height)
+    @item = nil
+    @page_index = 0
+    refresh
+  end
+  #--------------------------------------------------------------------------
+  # * Set Item
+  #--------------------------------------------------------------------------
+  def item=(item)
+    @item = item
+    refresh
+  end
+  #--------------------------------------------------------------------------
+  # * Set Page Index
+  #--------------------------------------------------------------------------
+  def page_index=(page_index)
+    @page_index = page_index
+    refresh
+  end
+  #--------------------------------------------------------------------------
+  # * Determine Ref (Reference)
+  # Because so many of the methods are shared between the many types, 
+  # I established @@ref on the refresh. 
+  #--------------------------------------------------------------------------
+  def determine_ref
+    @@ref = $data_items   if @item.is_a?(RPG::Item)
+    @@ref = $data_skills  if @item.is_a?(RPG::Skill)
+    @@ref = $data_weapons if @item.is_a?(RPG::Weapon)
+    @@ref = $data_armors  if @item.is_a?(RPG::Armor)
+  end
+  #--------------------------------------------------------------------------
+  # * Refresh
+  #--------------------------------------------------------------------------
+  def refresh
+    contents.clear
+    @@hs = 15 #horizontal spacing between parameters and other things
+    @@ln = 0 # starting line number in Info Window
+    contents.font.size = 20
+    @@fs = contents.font.size - 3
+    determine_ref
+    width = (contents.width - 12)
+    draw_usable_info(4, 0, width) if @item.is_a?(RPG::UsableItem)
+    draw_equip_info(4, 0, width)  if @item.is_a?(RPG::EquipItem)
+    draw_page_change_text if info_page_max > 1 && @item.is_a?(RPG::BaseItem)
+  end
+  #--------------------------------------------------------------------------
+  # * Get Info Max Lines
+  # Because we don't want it to draw lines into change page text and beyond.
+  #--------------------------------------------------------------------------
+  def info_ln_max
+    return 13
+  end
+  #--------------------------------------------------------------------------
+  # * Get Maximum Number of Pages
+  #--------------------------------------------------------------------------
+  def info_page_max
+    if @item.is_a?(RPG::Enemy)
+      return 4
+    elsif @item.is_a?(RPG::Class)
+      return 3
+    else
+      return 2
+    end
+  end
+  #--------------------------------------------------------------------------
+  # * Frame Update
+  #--------------------------------------------------------------------------
+  def update
+    super
+    update_page
+  end
+  #--------------------------------------------------------------------------
+  # * Update Page
+  #--------------------------------------------------------------------------
+  def update_page
+    if visible && Input.trigger?(:A) && info_page_max > 1
+      @page_index = (@page_index + 1) % info_page_max
+      refresh
+    end
+  end
+#^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^#
+#   * Block Methods
+#^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^#
+  #----------------------------------------------------------------------------
+  # * Draw Usable General Block
+  #----------------------------------------------------------------------------
+  def draw_usable_general(x, y, width)
+    for method in TIBB::Config::UsableGeneral
+      case method
+      when :empty_space
+        @@ln += 1
+      when :general_usable_title
+        text = Vocab.usable_general_title
+        draw_block_title(x - 4, y  + @@fs * @@ln, text, width + 8)
+        @@ln += 1
+      when :name
+        draw_base_name(x, y, width)
+      when :id
+        draw_base_id(x, y, width)
+      when :skill_type
+        draw_stype_id(x, y, width) if @item.is_a?(RPG::Skill)
+      when :item_type
+        draw_itype(x, y, width) if @item.is_a?(RPG::Item)
+      when :in_inventory
+        draw_buy_possession(x, y, width) if @item.is_a?(RPG::Item)
+      when :price
+        draw_buy_price(x, y, width) if @item.is_a?(RPG::Item)
+      when :item_consumability
+        draw_item_consume(x, y, width) if @item.is_a?(RPG::Item)
+      when :skill_cost
+        draw_skill_cost(x, y, width) if @item.is_a?(RPG::Skill) #&& include_skill_cost
+      when :required_weapon_type
+        draw_req_wtype(x, y, width) if @item.is_a?(RPG::Skill)
+      when :occasion
+        draw_usable_occasion(x, y, width)
+      when :special_note
+        draw_base_special_note(x, y, width)
+      when :scope
+        draw_usable_scope(x, y, width)
+      when :hit_type
+        draw_usable_hit_type(x, y, width)
+      when :repeats
+        draw_usable_repeats(x, y, width)
+      when :success_rate
+        draw_usable_success_rate(x, y, width)
+      when :speed
+        draw_usable_speed(x, y, width)
+      when :tp_gain
+        draw_usable_tp_gain(x, y, width)
+      else; ;end
+    end #for method in TIBB::Config::UsableGeneral
+  end
+  #----------------------------------------------------------------------------
+  # * Draw Usable Damage Block
+  #----------------------------------------------------------------------------
+  def draw_usable_damage(x, y, width)
+    for method in TIBB::Config::UsableDamage
+      case method
+      when :empty_space
+        @@ln += 1
+      when :damage_title
+        text = Vocab.usable_damage_title#"Variable Dmg/Rec Effect"
+        draw_block_title(x - 4, y  + @@fs * @@ln, text, width + 8)
+        @@ln += 1
+      when :damage_type
+        draw_usable_damage_type(x, y, width)
+      when :damage_element
+        draw_usable_dmg_element(x, y, width)
+      when :damage_formula
+        draw_usable_damage_formula(x, y, width)
+      when :damage_variance
+        draw_usable_damage_variance(x, y, width)
+      when :damage_critical
+        draw_usable_dmg_critical(x, y, width)
+      else; ;end
+    end #for method in TIBB::Config::UsableDamage
+  end
+  #----------------------------------------------------------------------------
+  # * Draw Usable Effects Block
+  #----------------------------------------------------------------------------
+  def draw_usable_effects(x, y, width)
+    for method in TIBB::Config::UsableEffects
+      case method
+      when :empty_space
+        @@ln += 1
+      when :effects_title
+        text = Vocab.usable_effects_title if @@ref[@item.id].damage.type != 0
+        text = Vocab.usable_effects_title_alt if @@ref[@item.id].damage.type == 0
+        draw_block_title(x - 4, y  + @@fs * @@ln, text, width + 8)
+        @@ln += 1
+        if @item.effects.empty?
+          draw_text(x, y  + @@fs * @@ln, width, line_height, "-None-", 1); end
+      when :hp_recovery
+        draw_effect_hp_recovery(x, y, width)
+      when :mp_recovery
+        draw_effect_mp_recovery(x, y, width)
+      when :tp_recovery
+        draw_effect_tp_recovery(x, y, width)
+      when :add_state
+        draw_effect_add_state(x, y, width)
+      when :remove_state
+        draw_effect_remove_state(x, y, width)
+      when :add_buff
+        draw_effect_add_buff(x, y, width)
+      when :add_debuff
+        draw_effect_add_debuff(x, y, width)
+      when :remove_buff
+        draw_effect_remove_buff(x, y, width)
+      when :remove_debuff
+        draw_effect_remove_debuff(x, y, width)
+      when :special_effect
+        draw_effect_special_effect(x, y, width)
+      when :grow_parameter
+        draw_effect_grow(x, y, width)
+      when :learn_skill
+        draw_effect_learn_skill(x, y, width)
+      else; ;end
+    end #for method in TIBB::Config::UsableEffects
+  end
+  #----------------------------------------------------------------------------
+  # * Draw Equipment General Block
+  #----------------------------------------------------------------------------
+  def draw_equip_general(x, y, width)
+    for method in TIBB::Config::EquipmentGeneral
+      case method
+      when :empty_space
+        @@ln += 1
+      when :general_equip_title
+        text = Vocab.equip_general_title
+        draw_block_title(x - 4, y  + @@fs * @@ln, text, width + 8)
+        @@ln += 1
+      when :name
+        draw_base_name(x, y, width)
+      when :id
+        draw_base_id(x, y, width)
+      when :special_note
+        draw_base_special_note(x, y, width)
+      when :actor_image_with_param_change
+        draw_actor_equip_image(x, y, width)
+      when :equip_type
+        draw_combined_equip_type(x, y, width)
+      when :in_inventory
+        draw_buy_possession(x, y, width)
+      when :price
+        draw_buy_price(x, y, width)
+      when :performance
+        draw_equip_performance(x, y, width)
+      when :parameter_bonuses_title
+        text = Vocab.equip_parameter_title
+        draw_block_title(x - 4, y  + @@fs * @@ln, text, width + 8)
+        @@ln += 1
+      when :parameter_bonuses
+        draw_equip_nparam(x, y, width)
+      else; ;end
+    end #for method in TIBB::Config::EquipmentGeneral
+  end
+  
+  #----------------------------------------------------------------------------
+  # * Draw Base Features Block
+  #----------------------------------------------------------------------------
+  def draw_base_features(x, y, width)
+    for method in TIBB::Config::BaseFeatures
+      case method
+      when :empty_space
+        @@ln += 1
+      when :feature_title
+        text = Vocab.base_features_title
+        draw_block_title(x - 4, y  + @@fs * @@ln, text, width + 8)
+        @@ln += 1
+        if @item.features.empty?
+          draw_text(x, y  + @@fs * @@ln, width, line_height, "-None-", 1); end
+      when :nparam_rate
+        draw_base_nparam_rate(x, y, width)
+      when :xparam_rate
+        draw_base_xparam_rate(x, y, width)
+      when :sparam_rate
+        draw_base_sparam_rate(x, y, width)
+      when :element_rate
+        draw_base_element_rate(x, y, width)
+      when :defuff_rate
+        draw_base_debuff_rate(x, y, width)
+      when :state_rate
+        draw_base_state_rate(x, y, width)
+      when :state_resist
+        draw_base_state_resist(x, y, width)
+      when :attack_element
+        draw_base_atk_element(x, y, width)
+      when :attack_state
+        draw_base_atk_state(x, y, width)
+      when :attack_speed
+        draw_base_atk_speed(x, y, width)
+      when :attack_times
+        draw_base_atk_times(x, y, width)
+      when :add_skill_type
+        draw_base_add_skill_type(x, y, width)
+      when :disable_skill_type
+        draw_base_disable_skill_type(x, y, width)
+      when :add_skill
+        draw_base_add_skill(x, y, width)
+      when :disable_skill
+        draw_base_disable_skill(x, y, width)
+      when :add_weapon_type
+        draw_base_add_wtype(x, y, width)
+      when :add_armor_type
+        draw_base_add_atype(x, y, width)
+      when :lock_equipment
+        draw_base_lock_equipment(x, y, width)
+      when :seal_equipment
+        draw_base_seal_equipment(x, y, width)
+      when :change_equipment_slot
+        draw_base_change_equipment(x, y, width)
+      when :action_times
+        draw_base_action_times(x, y, width)
+      when :special_flag
+        draw_base_special_flag(x, y, width)
+      when :collapse_effect
+        draw_base_collapse_effect(x, y, width)
+      when :party_ability
+        draw_base_party_ability(x, y, width)
+      else; ;end
+    end #for method in TIBB::Config::Features
+  end
+#^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^#
+#   * Base Methods
+#   Used by a lot of types
+#^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^#
+  #--------------------------------------------------------------------------
+  # * Draw Price
+  #--------------------------------------------------------------------------
+  def draw_buy_price(x, y, width)
+    return if @@ln == info_ln_max
+    change_color(system_color)
+    draw_text(x, y + @@fs * @@ln, width, line_height, Vocab::buy_price_label)
+    change_color(normal_color)
+    text1 = @@ref[@item.id].price
+    text1 = (text1.to_i).to_s + " " + Vocab::currency_unit
+    draw_text(x, y + @@fs * @@ln, width, line_height, text1, 2)
+    @@ln += 1
+  end
+  #--------------------------------------------------------------------------
+  # * Draw Quantity Possessed
+  #--------------------------------------------------------------------------    
+  def draw_buy_possession(x, y, width)
+    return if @@ln == info_ln_max
+    rect = Rect.new(x, y + @@fs * @@ln, width, line_height)
+    change_color(system_color)
+    draw_text(rect, Vocab::Possession)
+    change_color(normal_color)
+    draw_text(rect, $game_party.item_number(@item), 2)
+    @@ln += 1
+  end
+  #--------------------------------------------------------------------------
+  # * Draw Name
+  #--------------------------------------------------------------------------
+  def draw_base_name(x, y, width)
+    return if @@ln == info_ln_max
+    change_color(system_color)
+    draw_text(x, y + @@fs * @@ln, width, line_height, Vocab::base_name_label)
+    change_color(normal_color)
+    text1 = @@ref[@item.id].name
+    draw_text(x, y + @@fs * @@ln, width, line_height, text1, 2)
+    @@ln += 1
+  end
+  #--------------------------------------------------------------------------
+  # * Draw ID
+  #--------------------------------------------------------------------------
+  def draw_base_id(x, y, width)
+    return if @@ln == info_ln_max
+    change_color(system_color)
+    draw_text(x, y + @@fs * @@ln, width, line_height, Vocab::base_id_label)
+    change_color(normal_color)
+    text1 = (@@ref[@item.id].id).to_s + "/" + (@@ref.size - 1).to_s
+    draw_text(x, y + @@fs * @@ln, width, line_height, text1, 2)
+    @@ln += 1
+  end
+#^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^#
+#   * Features Methods
+#   Used by a lot of types
+#^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^#
+  #--------------------------------------------------------------------------
+  # * Draw Normal Parameter Rate - Bonus Style
+  #--------------------------------------------------------------------------
+  def draw_base_nparam_rate(x, y, width)
+    for feature in @item.features
+      return if @@ln == info_ln_max
+      next unless feature.code == 21 #nparam rate
+      next if feature.value == 1
+      rect = Rect.new(x, y + @@fs * @@ln, width, line_height)
+      text = Vocab::param(feature.data_id)
+      change_color(system_color)
+      draw_text(rect, text)
+      change_color(normal_color)
+      text1 = (feature.value * 100).to_i
+      text1 = text1 - 100
+      text1 = text1 * -1 if TIBB::Config::N_RateFlip
+      text1 = "+" + text1.to_s if text1 > 0 && @@ref != $data_enemies
+      text1 = text1.to_s + "%"
+      draw_text(rect, text1, 2)
+      @@ln += 1    
+    end
+  end
+  #--------------------------------------------------------------------------
+  # * Draw X-Parameter Rate - Bonus Style
+  #--------------------------------------------------------------------------
+  def draw_base_xparam_rate(x, y, width)
+    for feature in @item.features
+      return if @@ln == info_ln_max
+      next unless feature.code == 22 #xparam
+      next if feature.value == 0
+      rect = Rect.new(x, y + @@fs * @@ln, width, line_height)
+      text = Vocab::xparam(feature.data_id)
+      change_color(system_color)
+      draw_text(rect, text)
+      change_color(normal_color)
+      text1 = (feature.value * 100).to_i
+      text1 = "+" + text1.to_s if text1 > 0 && @@ref != $data_enemies
+      text1 = text1.to_s + "%"
+      draw_text(rect, text1, 2)
+      @@ln += 1   
+    end
+  end
+  #--------------------------------------------------------------------------
+  # * Draw S-Parameter Rate - Bonus Style
+  #--------------------------------------------------------------------------
+  def draw_base_sparam_rate(x, y, width)
+    for feature in @item.features
+      return if @@ln == info_ln_max
+      next unless feature.code == 23 #sparam rate
+      next if feature.value == 1
+      rect = Rect.new(x, y + @@fs * @@ln, width, line_height)
+      text = Vocab::sparam(feature.data_id)
+      change_color(system_color)
+      draw_text(rect, text)
+      change_color(normal_color)
+      text1 = (feature.value * 100).to_i
+      text1 = text1 - 100
+      text1 = text1 * -1 if TIBB::Config::S_Flip
+      text1 = "+" + text1.to_s if text1 > 0
+      text1 = text1.to_s + "%"
+      draw_text(rect, text1, 2)
+      @@ln += 1
+    end
+  end
+  #--------------------------------------------------------------------------
+  # * Draw Element Rate - Bonus Style
+  #--------------------------------------------------------------------------
+  def draw_base_element_rate(x, y, width)
+    title_drawn = false
+    for feature in @item.features
+      return if @@ln == info_ln_max
+      next unless feature.code == 11 #element rate
+      next if feature.value == 1
+      unless title_drawn == true
+        change_color(system_color)
+        draw_text(x, y + @@fs * @@ln, width, line_height, 
+                  Vocab::feature(feature.code))
+        title_drawn = true; end
+      change_color(normal_color)
+      text1 = $data_system.elements[feature.data_id]
+      text2 = (feature.value * 100).to_i
+      text2 = (text2 - 100)
+      text2 = text2 * -1 if TIBB::Config::E_Flip
+      text2 = "+" + text2.to_s if text2 > 0
+      text2 = text2.to_s + "%"
+      text1 = text1 + ": " + text2
+      draw_text(x, y + @@fs * @@ln, width, line_height, text1, 2)
+      @@ln += 1
+    end
+  end
+  #--------------------------------------------------------------------------
+  # * Draw DeBuff Rate - Bonus Style
+  #--------------------------------------------------------------------------
+  def draw_base_debuff_rate(x, y, width)
+    title_drawn = false
+    for feature in @item.features
+      return if @@ln == info_ln_max
+      next unless feature.code == 12 #debuff rate
+      next if feature.value == 1
+      unless title_drawn == true
+        change_color(system_color)
+        draw_text(x, y + @@fs * @@ln, width, line_height, 
+                  Vocab::feature(feature.code))
+        title_drawn = true; end
+      change_color(normal_color)
+      text1 = Vocab::param(feature.data_id)
+      text2 = (feature.value * 100).to_i
+      text2 = (text2 - 100)
+      text2 = text2 * -1 if TIBB::Config::DeBu_Flip
+      text2 = "+" + text2.to_s if text2 > 0
+      text2 = text2.to_s + "%"
+      text1 = text1 + ": " + text2
+      draw_text(x, y + @@fs * @@ln, width, line_height, text1, 2)
+      @@ln += 1
+    end
+  end
+  #--------------------------------------------------------------------------
+  # * Draw State Rate - Bonus Style
+  #--------------------------------------------------------------------------
+  def draw_base_state_rate(x, y, width)
+    title_drawn = false
+    for feature in @item.features
+      return if @@ln == info_ln_max
+      next unless feature.code == 13 #state rate
+      next if feature.value == 1
+      unless title_drawn == true
+        change_color(system_color)
+        draw_text(x, y + @@fs * @@ln, width, line_height, 
+                  Vocab::feature(feature.code))
+        title_drawn = true; end
+      change_color(normal_color)
+      text1 = Vocab::states(feature.data_id)
+      text2 = (feature.value * 100).to_i
+      text2 = (text2 - 100)
+      text2 = text2 * -1 if TIBB::Config::St_Flip
+      text2 = "+" + text2.to_s if text2 > 0
+      text2 = text2.to_s + "%"
+      text1 = text1 + ": " + text2
+      draw_text(x, y + @@fs * @@ln, width, line_height, text1, 2)
+      @@ln += 1
+    end
+  end
+  #--------------------------------------------------------------------------
+  # * Draw State Resist
+  #--------------------------------------------------------------------------
+  def draw_base_state_resist(x, y, width)
+    title_drawn = false
+    for feature in @item.features
+      return if @@ln == info_ln_max
+      next unless feature.code == 14 #state resist
+      unless title_drawn == true
+        change_color(system_color)
+        draw_text(x, y + @@fs * @@ln, width, line_height, 
+                  Vocab::feature(feature.code))
+        title_drawn = true; end
+      change_color(normal_color)
+      text1 = Vocab::states(feature.data_id)
+      draw_text(x, y + @@fs * @@ln, width, line_height, text1, 2)
+      @@ln += 1
+    end
+  end
+  #--------------------------------------------------------------------------
+  # * Draw Added Attack Elements
+  #--------------------------------------------------------------------------
+  def draw_base_atk_element(x, y, width)
+    title_drawn = false
+    for feature in @item.features
+      return if @@ln == info_ln_max
+      next unless feature.code == 31 #Atk Element
+      unless title_drawn == true
+        change_color(system_color)
+        draw_text(x, y + @@fs * @@ln, width, line_height, 
+                  Vocab::feature(feature.code))
+        title_drawn = true; end
+      change_color(normal_color)
+      text1 = $data_system.elements[feature.data_id]
+      draw_text(x, y + @@fs * @@ln, width, line_height, text1, 2)
+      @@ln += 1
+    end
+  end
+  #--------------------------------------------------------------------------
+  # * Draw Added Attack States
+  #--------------------------------------------------------------------------
+  def draw_base_atk_state(x, y, width)
+    title_drawn = false
+    for feature in @item.features
+      return if @@ln == info_ln_max
+      next unless feature.code == 32 #Atk State
+      next if feature.value == 1
+      unless title_drawn == true
+        change_color(system_color)
+        draw_text(x, y + @@fs * @@ln, width, line_height, 
+                  Vocab::feature(feature.code))
+        title_drawn = true; end
+      change_color(normal_color)
+      text1 = Vocab::states(feature.data_id)
+      text2 = (feature.value * 100).to_i
+      text1 = text1 + ": " + text2.to_s
+      draw_text(x, y + @@fs * @@ln, width, line_height, text1, 2)
+      @@ln += 1
+    end
+  end
+  #--------------------------------------------------------------------------
+  # * Draw Added Attack Speed - Bonus Style
+  #--------------------------------------------------------------------------
+  def draw_base_atk_speed(x, y, width)
+    for feature in @item.features
+      return if @@ln == info_ln_max
+      next unless feature.code == 33 #Atk Speed
+      next if feature.value == 0
+      change_color(system_color)
+      draw_text(x, y + @@fs * @@ln, width, line_height, 
+                  Vocab::feature(feature.code))
+      change_color(normal_color)
+      text1 = feature.value.to_i
+      text1 = "+" + text1.to_s if text1 > 0
+      draw_text(x, y + @@fs * @@ln, width, line_height, text1, 2)
+      @@ln += 1
+    end
+  end
+  #--------------------------------------------------------------------------
+  # * Draw Added Attack Times - Bonus Style
+  #--------------------------------------------------------------------------
+  def draw_base_atk_times(x, y, width)
+    for feature in @item.features
+      return if @@ln == info_ln_max
+      next unless feature.code == 34 #Atk Times
+      next if feature.value == 0
+      change_color(system_color)
+      draw_text(x, y + @@fs * @@ln, width, line_height, 
+                  Vocab::feature(feature.code))
+      change_color(normal_color)
+      text1 = feature.value.to_i
+      text1 = "+" + text1.to_s if text1 > 0
+      draw_text(x, y + @@fs * @@ln, width, line_height, text1, 2)
+      @@ln += 1
+    end
+  end
+  #--------------------------------------------------------------------------
+  # * Draw Added Skill Types
+  #--------------------------------------------------------------------------
+  def draw_base_add_skill_type(x, y, width)
+    title_drawn = false
+    for feature in @item.features
+      return if @@ln == info_ln_max
+      next unless feature.code == 41 #Add Skill Type
+      unless title_drawn == true
+        change_color(system_color)
+        draw_text(x, y + @@fs * @@ln, width, line_height, 
+                    Vocab::feature(feature.code))
+        title_drawn = true
+      end
+      change_color(normal_color)
+      text1 = Vocab::stype(feature.data_id)
+      draw_text(x, y + @@fs * @@ln, width, line_height, text1, 2)
+      @@ln += 1
+    end
+  end
+  #--------------------------------------------------------------------------
+  # * Draw Disabled Skill Types
+  #--------------------------------------------------------------------------
+  def draw_base_disable_skill_type(x, y, width)
+    title_drawn = false
+    for feature in @item.features
+      return if @@ln == info_ln_max
+      next unless feature.code == 42 #Disable Skill Type
+      unless title_drawn == true
+        change_color(system_color)
+        draw_text(x, y + @@fs * @@ln, width, line_height, 
+                  Vocab::feature(feature.code))
+        title_drawn = true
+      end
+      change_color(normal_color)
+      text1 = Vocab::stype(feature.data_id)
+      draw_text(x, y + @@fs * @@ln, width, line_height, text1, 2)
+      @@ln += 1
+    end
+  end
+  #--------------------------------------------------------------------------
+  # * Draw Added Skills
+  #--------------------------------------------------------------------------
+  def draw_base_add_skill(x, y, width)
+    title_drawn = false
+    for feature in @item.features
+      return if @@ln == info_ln_max
+      next unless feature.code == 43 #Add Skill
+      unless title_drawn == true
+        change_color(system_color)
+        draw_text(x, y + @@fs * @@ln, width, line_height, 
+                  Vocab::feature(feature.code))
+        title_drawn = true
+      end
+      change_color(normal_color)
+      text1 = $data_skills[feature.data_id].name
+      draw_text(x, y + @@fs * @@ln, width, line_height, text1, 2)
+      @@ln += 1
+    end
+  end
+  #--------------------------------------------------------------------------
+  # * Draw Disabled Skills
+  #--------------------------------------------------------------------------
+  def draw_base_disable_skill(x, y, width)
+    title_drawn = false
+    for feature in @item.features
+      return if @@ln == info_ln_max
+      next unless feature.code == 44 #Disable Skill
+      unless title_drawn == true
+        change_color(system_color)
+        draw_text(x, y + @@fs * @@ln, width, line_height, 
+                  Vocab::feature(feature.code))
+        title_drawn = true
+      end
+      change_color(normal_color)
+      text1 = $data_skills[feature.data_id].name
+      draw_text(x, y + @@fs * @@ln, width, line_height, text1, 2)
+      @@ln += 1
+    end
+  end
+  #--------------------------------------------------------------------------
+  # * Draw Added Weapon Types
+  #--------------------------------------------------------------------------
+  def draw_base_add_wtype(x, y, width)
+    title_drawn = false
+    for feature in @item.features
+      return if @@ln == info_ln_max
+      next unless feature.code == 51 #Equip Weapon Type
+      unless title_drawn == true
+        change_color(system_color)
+        draw_text(x, y + @@fs * @@ln, width, line_height, 
+                  Vocab::feature(feature.code))
+        title_drawn = true; end
+      change_color(normal_color)
+      text1 = Vocab::wtype(feature.data_id)
+      draw_text(x, y + @@fs * @@ln, width, line_height, text1, 2)
+      @@ln += 1
+    end
+  end
+  #--------------------------------------------------------------------------
+  # * Draw Added Armor Types
+  #--------------------------------------------------------------------------
+  def draw_base_add_atype(x, y, width)
+    title_drawn = false
+    for feature in @item.features
+      return if @@ln == info_ln_max
+      next unless feature.code == 52 #Equip Armor Type
+      unless title_drawn == true
+        change_color(system_color)
+        draw_text(x, y + @@fs * @@ln, width, line_height, 
+                  Vocab::feature(feature.code))
+        title_drawn = true; end
+      change_color(normal_color)
+      text1 = Vocab::atype(feature.data_id)
+      draw_text(x, y + @@fs * @@ln, width, line_height, text1, 2)
+      @@ln += 1
+    end
+  end
+  #--------------------------------------------------------------------------
+  # * Draw Locked Equipment Types
+  #--------------------------------------------------------------------------
+  def draw_base_lock_equipment(x, y, width)
+    title_drawn = false
+    for feature in @item.features
+      return if @@ln == info_ln_max
+      next unless feature.code == 53 #Lock Equipment
+      unless title_drawn == true
+        change_color(system_color)
+        draw_text(x, y + @@fs * @@ln, width, line_height, 
+                  Vocab::feature(feature.code))
+        title_drawn = true; end
+      change_color(normal_color)
+      text1 = Vocab::etype(feature.data_id)
+      draw_text(x, y + @@fs * @@ln, width, line_height, text1, 2)
+      @@ln += 1
+    end
+  end
+  #--------------------------------------------------------------------------
+  # * Draw Sealed Equipment Types
+  #--------------------------------------------------------------------------
+  def draw_base_seal_equipment(x, y, width)
+    title_drawn = false
+    for feature in @item.features
+      return if @@ln == info_ln_max
+      next unless feature.code == 54 #Seal Equipment
+      unless title_drawn == true
+        change_color(system_color)
+        draw_text(x, y + @@fs * @@ln, width, line_height, 
+                  Vocab::feature(feature.code))
+        title_drawn = true; end
+      change_color(normal_color)
+      text1 = Vocab::etype(feature.data_id)
+      draw_text(x, y + @@fs * @@ln, width, line_height, text1, 2)
+      @@ln += 1
+    end
+  end
+  #--------------------------------------------------------------------------
+  # * Draw Change to Dual Wield
+  #--------------------------------------------------------------------------
+  def draw_base_change_equipment(x, y, width)
+    for feature in @item.features
+      return if @@ln == info_ln_max
+      next unless feature.code == 55 # Slot Type
+      change_color(system_color)
+      draw_text(x, y + @@fs * @@ln, width, line_height, 
+                  Vocab::feature(feature.code))
+      change_color(normal_color)
+      text1 = Vocab.change_equip_type
+      draw_text(x, y + @@fs * @@ln, width, line_height, text1, 2)
+      @@ln += 1
+    end
+  end
+  #--------------------------------------------------------------------------
+  # * Draw Additional Action Times Rate
+  #--------------------------------------------------------------------------
+  def draw_base_action_times(x, y, width)
+    for feature in @item.features
+      return if @@ln == info_ln_max
+      next unless feature.code == 61 #Action Times
+      next if feature.value == 0
+      change_color(system_color)
+      draw_text(x, y + @@fs * @@ln, width, line_height, 
+                  Vocab::feature(feature.code))
+      change_color(normal_color)
+      text1 = (feature.value * 100).to_i
+      text1 = text1.to_s + "%"
+      draw_text(x, y + @@fs * @@ln, width, line_height, text1, 2)
+      @@ln += 1
+    end
+  end
+  #--------------------------------------------------------------------------
+  # * Draw Special Flag
+  #--------------------------------------------------------------------------
+  def draw_base_special_flag(x, y, width)
+    title_drawn = false
+    for feature in @item.features
+      return if @@ln == info_ln_max
+      next unless feature.code == 62 #Special Flag
+      unless title_drawn == true
+        change_color(system_color)
+        draw_text(x, y + @@fs * @@ln, width, line_height, 
+                  Vocab::feature(feature.code))
+        title_drawn = true; end
+      change_color(normal_color)
+      text1 = Vocab::special_flag(feature.data_id)
+      draw_text(x, y + @@fs * @@ln, width, line_height, text1, 2)
+      @@ln += 1
+    end
+  end
+  #--------------------------------------------------------------------------
+  # * Draw Collapse Effect
+  #--------------------------------------------------------------------------
+  def draw_base_collapse_effect(x, y, width)
+    title_drawn = false
+    for feature in @item.features
+      return if @@ln == info_ln_max
+      next unless feature.code == 63 #Collapse Effect
+      unless title_drawn == true
+        change_color(system_color)
+        draw_text(x, y + @@fs * @@ln, width, line_height, 
+                  Vocab::feature(feature.code))
+        title_drawn = true; end
+      change_color(normal_color)
+      text1 = Vocab::collapse_type(feature.data_id)
+      draw_text(x, y + @@fs * @@ln, width, line_height, text1, 2)
+      @@ln += 1
+    end
+  end
+  #--------------------------------------------------------------------------
+  # * Draw Party Ability
+  #--------------------------------------------------------------------------
+  def draw_base_party_ability(x, y, width)
+    title_drawn = false
+    for feature in @item.features
+      return if @@ln == info_ln_max
+      next unless feature.code == 64 #Party Ability
+      unless title_drawn == true
+        change_color(system_color)
+        draw_text(x, y + @@fs * @@ln, width, line_height, 
+                  Vocab::feature(feature.code))
+        title_drawn = true; end
+      change_color(normal_color)
+      text1 = Vocab::party_ability(feature.data_id)
+      draw_text(x, y + @@fs * @@ln, width, line_height, text1, 2)
+      @@ln += 1
+    end
+  end
+#^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^#
+#   * Equipment Methods
+#   Used by both Weapons and Armor
+#^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^#
+  #----------------------------------------------------------------------------
+  # * Draw Equipment Normal Parameters
+  #----------------------------------------------------------------------------
+  def draw_equip_nparam(x, y, width)
+    return if @@ln == info_ln_max
+    @@column = 0
+    @@col_max = TIBB::Config::NParameterColumnMax
+    @@col_width = ((width - (@@col_max - 1) * @@hs) / @@col_max)
+    8.times {|i| draw_bonus_nparam(x, y, i) }
+  end
+  #----------------------------------------------------------------------------
+  # * Draw Bonus Normal Parameters
+  # Set in the Bonus Style. Will not draw parameter if HideZeroNParam is true
+  # and is a weapon or armor
+  #----------------------------------------------------------------------------
+  def draw_bonus_nparam(x, y, param_id)
+    return if @@ln == info_ln_max
+    value = @@ref[@item.id].params[param_id]
+    if value == 0 && TIBB::Config::HideZeroNParam && @item.is_a?(RPG::EquipItem)
+      return; end
+    rect = Rect.new(x + @@column * (@@col_width + @@hs), y + @@fs * @@ln, 
+                      @@col_width, line_height)
+    text = Vocab::param(param_id)
+    change_color(system_color)
+    draw_text(rect, text)
+    change_color(normal_color)
+    value = "+" + value.to_s unless value < 0 || @item.is_a?(RPG::Enemy)
+    rect = Rect.new(x + @@column * (@@col_width + @@hs), y + @@fs * @@ln, 
+                      @@col_width, line_height)
+    draw_text(rect, value, 2)
+    @@column += 1
+    if @@column == @@col_max; @@ln += 1; @@column = 0; end
+  end
+  #--------------------------------------------------------------------------
+  # * Draw Equipment Performance
+  #--------------------------------------------------------------------------
+  def draw_equip_performance(x, y, width)
+    return if @@ln == info_ln_max
+    change_color(system_color)
+    draw_text(x, y + @@fs * @@ln, width, line_height, Vocab::performance_label)
+    change_color(normal_color)
+    text1 = (@@ref[@item.id].performance).to_s
+    draw_text(x, y + @@fs * @@ln, width, line_height, text1, 2)
+    @@ln += 1
+  end
+  #--------------------------------------------------------------------------
+  # * Draw Combined Equipment Type
+  # Label on the left side includes slot name and Weapon/ Armor Type on right.
+  #--------------------------------------------------------------------------
+  def draw_combined_equip_type(x, y, width)
+    return if @@ln == info_ln_max
+    change_color(system_color)
+    value = @@ref[@item.id].etype_id
+    text = Vocab::etype(value)
+    text1 = Vocab::combined_equip_suffix
+    draw_text(x, y + @@fs * @@ln, width, line_height, text + " " + text1)
+    change_color(normal_color)
+    text2 = Vocab::wtype(@@ref[@item.id].wtype_id) if @item.is_a?(RPG::Weapon)
+    text2 = Vocab::atype(@@ref[@item.id].atype_id) if @item.is_a?(RPG::Armor)
+    draw_text(x, y + @@fs * @@ln, width, line_height, text2, 2)
+    @@ln += 1
+  end
+  #--------------------------------------------------------------------------
+  # * Draw Actor Equip Image - Uses the next 6 methods.
+  #--------------------------------------------------------------------------
+  def draw_actor_equip_image(x, y, width)
+    return if @@ln == info_ln_max
+    @@ln += 2
+    @@column = 0
+    @@col_max = TIBB::Config::EquipMemPerLine
+    @@col_width = width / @@col_max
+    info_window_status_members.each_with_index do |actor, i|
+      enabled = actor.equippable?(@item)
+      if @@column == @@col_max; @@ln += 2; @@column = 0; end
+      tx = x + @@column * @@col_width
+      ty = y + @@fs * @@ln
+      draw_actor_graphic_alt(actor, tx + @@col_width / 2, ty, enabled)
+      item1 = current_equip(actor, @item.etype_id)
+      if item1 == @item
+        change_color(normal_color)
+        contents.font.bold = true
+        contents.font.italic = true
+        contents.font.shadow = true
+        draw_text(tx, y + @@fs * (@@ln - 1), @@col_width, line_height, "-E-", 1)
+        contents.font.bold = false
+        contents.font.italic = false
+        contents.font.shadow = false
+      else; draw_actor_equip_param_change(x, y, actor, item1) if enabled; end
+      @@column += 1      
+    end #info_window_status_members.each_with_index do |actor, i|
+  end
+  #--------------------------------------------------------------------------
+  # * Info Window Status Members
+  #  Establishes an array of actors for which to Draw EquipItem Images
+  #--------------------------------------------------------------------------
+  def info_window_status_members
+    if TIBB::Config::EquipMem == "all"
+      $game_party.members[0, $game_party.members.size]
+    elsif TIBB::Config::EquipMem == "battle"
+      $game_party.members[0, $game_party.max_battle_members.size]
+    else; $game_party.members[0, TIBB::Config::EquipMem]; end
+  end
+  #--------------------------------------------------------------------------
+  # * Draw Actor Parameter Change
+  #--------------------------------------------------------------------------
+  def draw_actor_equip_param_change(x, y, actor, item1)
+    tx = x + @@column * @@col_width
+    ty = y + @@fs * (@@ln - 1)
+    rect = Rect.new(tx, ty, @@col_width, line_height)
+    change = @item.params[equip_param] - (item1 ? item1.params[equip_param] : 0)
+    change_color(param_change_color(change))
+    contents.font.bold = true
+    contents.font.italic = true
+    contents.font.shadow = true
+    text = change.to_s
+    text = "+" + text unless change < 0
+    #text = sprintf("%+d", change)
+    draw_text(rect, text, 1)
+    contents.font.bold = false
+    contents.font.italic = false
+    contents.font.shadow = false
+  end
+  #--------------------------------------------------------------------------
+  # * Get Parameter ID Corresponding to Selected Item
+  #    By default, ATK if weapon and DEF if armor.
+  #--------------------------------------------------------------------------
+  def equip_param
+    value = @@ref[@item.id].etype_id
+    case value
+    when 0
+      wkind = @@ref[@item.id].wtype_id
+      case wkind
+      when TIBB::Config::EquipParamSpecialWeaponType1[0]
+        return TIBB::Config::EquipParamSpecialWeaponType1[1]
+      when TIBB::Config::EquipParamSpecialWeaponType2[0]
+        return TIBB::Config::EquipParamSpecialWeaponType2[1]
+      else; return TIBB::Config::EquipParamStandardWeapon; end
+    when 1; return TIBB::Config::EquipParamShield
+    when 2; return TIBB::Config::EquipParamHead
+    when 3; return TIBB::Config::EquipParamBody
+    when 4; return TIBB::Config::EquipParamAccess
+    else; return TIBB::Config::EquipParamDefault; end
+  end
+  #--------------------------------------------------------------------------
+  # * Get Current Equipment
+  #    Returns the weaker equipment if there is more than one of the same type,
+  #    such as with dual wield.
+  #--------------------------------------------------------------------------
+  def current_equip(actor, etype_id)
+    list = []
+    actor.equip_slots.each_with_index do |slot_etype_id, i|
+      list.push(actor.equips[i]) if slot_etype_id == etype_id
+    end
+    list.min_by {|item| item ? item.params[equip_param] : 0 }
+  end
+ #--------------------------------------------------------------------------
+  # --Overwrite Method--
+  # * Draw Actor Walking Graphic
+  #--------------------------------------------------------------------------
+  def draw_actor_graphic_alt(actor, x, y, enabled)
+    draw_character_alt(actor.character_name, actor.character_index, x, y, enabled)
+  end
+  #--------------------------------------------------------------------------
+  # --Overwrite Method--
+  # * Draw Character Graphic
+  #--------------------------------------------------------------------------
+  def draw_character_alt(character_name, character_index, x, y, enabled)
+    return unless character_name
+    bitmap = Cache.character(character_name)
+    sign = character_name[/^[\!\$]./]
+    if sign && sign.include?('$'); cw = bitmap.width / 3; ch = bitmap.height / 4
+    else; cw = bitmap.width / 12; ch = bitmap.height / 8; end
+    n = character_index
+    src_rect = Rect.new((n%4*3+1)*cw, (n/4*4)*ch, cw, ch)
+    contents.blt(x - cw / 2, y - ch, bitmap, src_rect, 
+                    enabled ? 255 : translucent_alpha)
+  end
+#^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^#
+#   * Usable Methods
+#   Used by both Items and Skills
+#^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^#
+  #--------------------------------------------------------------------------
+  # * Draw Scope
+  #--------------------------------------------------------------------------
+  def draw_usable_scope(x, y, width)
+    return if @@ln == info_ln_max
+    change_color(system_color)
+    draw_text(x, y + @@fs * @@ln, width, line_height, Vocab::usable_scope_label)
+    change_color(normal_color)
+    text1 = Vocab::scope(@@ref[@item.id].scope)
+    draw_text(x, y + @@fs * @@ln, width, line_height, text1, 2)
+    @@ln += 1
+  end
+  #--------------------------------------------------------------------------
+  # * Draw Occasion
+  #--------------------------------------------------------------------------
+  def draw_usable_occasion(x, y, width)
+    return if @@ln == info_ln_max
+    change_color(system_color)
+    draw_text(x, y + @@fs * @@ln, width, line_height, Vocab::usable_occasion_label)
+    change_color(normal_color)
+    text1 = Vocab::occasion(@@ref[@item.id].occasion)
+    draw_text(x, y + @@fs * @@ln, width, line_height, text1, 2)
+    @@ln += 1
+  end
+  #--------------------------------------------------------------------------
+  # * Draw Damage Type
+  #--------------------------------------------------------------------------
+  def draw_usable_damage_type(x, y, width)
+    return if @@ln == info_ln_max
+    change_color(system_color)
+    text = Vocab::usable_damage_type_label
+    draw_text(x, y + @@fs * @@ln, width, line_height, text)
+    text1 = Vocab::dmg_type(@@ref[@item.id].damage.type)
+    change_color(normal_color)
+    draw_text(x, y + @@fs * @@ln, width, line_height, text1, 2)
+    @@ln += 1
+  end
+  #--------------------------------------------------------------------------
+  # * Draw Damage Element
+  #--------------------------------------------------------------------------
+  def draw_usable_dmg_element(x, y, width)  
+    return if @@ln == info_ln_max
+    change_color(system_color)
+    text = Vocab::usable_dmg_element_label
+    draw_text(x, y + @@fs * @@ln, width, line_height, text)
+    change_color(normal_color)
+    text1 = Vocab::elements(@@ref[@item.id].damage.element_id)
+    draw_text(x, y + @@fs * @@ln, width, line_height, text1, 2)
+    @@ln += 1
+  end
+  #--------------------------------------------------------------------------
+  # * Draw Can Critical
+  #--------------------------------------------------------------------------
+  def draw_usable_dmg_critical(x, y, width)
+    return if @@ln == info_ln_max
+    change_color(system_color)
+    text = Vocab::usable_dmg_crit_label
+    draw_text(x, y + @@fs * @@ln, width, line_height, text)
+    change_color(normal_color)
+    text1 = Vocab::crit(@@ref[@item.id].damage.critical)
+    draw_text(x, y + @@fs * @@ln, width, line_height, text1, 2)
+    @@ln += 1
+  end
+  #--------------------------------------------------------------------------
+  # * Draw Damage Formula - limited
+  #--------------------------------------------------------------------------
+  def draw_usable_damage_formula(x, y, width)
+    return if @@ln == info_ln_max
+    string = @@ref[@item.id].damage.formula
+    u_atk = string.include?("a.atk")   ? "..." + Vocab::param(2) : ""
+    u_def = string.include?("a.def")   ? "..." + Vocab::param(3) : ""
+    u_mat = string.include?("a.mat")   ? "..." + Vocab::param(4) : ""
+    u_mdf = string.include?("a.mdf")   ? "..." + Vocab::param(5) : ""
+    u_agi = string.include?("a.agi")   ? "..." + Vocab::param(6) : ""
+    u_luk = string.include?("a.luk")   ? "..." + Vocab::param(7) : ""
+    u_mhp = string.include?("a.mhp")   ? "..." + Vocab::param(0) : ""
+    u_mmp = string.include?("a.mmp")   ? "..." + Vocab::param(1) : ""
+    u_hp  = string.include?("a.hp")    ? "..." + Vocab::hp_a     : ""
+    u_mp  = string.include?("a.mp")    ? "..." + Vocab::mp_a     : ""
+    u_tp  = string.include?("a.tp")    ? "..." + Vocab::tp_a     : ""
+    u_lvl = string.include?("a.level") ? "..." + Vocab::level_a  : ""
+    
+    t_atk = string.include?("b.atk")   ? "..." + Vocab::param(2) : ""
+    t_def = string.include?("b.def")   ? "..." + Vocab::param(3) : ""
+    t_mat = string.include?("b.mat")   ? "..." + Vocab::param(4) : ""
+    t_mdf = string.include?("b.mdf")   ? "..." + Vocab::param(5) : ""
+    t_agi = string.include?("b.agi")   ? "..." + Vocab::param(6) : ""
+    t_luk = string.include?("b.luk")   ? "..." + Vocab::param(7) : ""
+    t_mhp = string.include?("b.mhp")   ? "..." + Vocab::param(0) : ""
+    t_mmp = string.include?("b.mmp")   ? "..." + Vocab::param(1) : ""
+    t_hp  = string.include?("b.hp")    ? "..." + Vocab::hp_a     : ""
+    t_mp  = string.include?("b.mp")    ? "..." + Vocab::mp_a     : ""
+    t_tp  = string.include?("b.tp")    ? "..." + Vocab::tp_a     : ""
+    t_lvl = string.include?("b.level") ? "..." + Vocab::level_a  : ""
+    
+    utext = u_atk + u_def + u_mat + u_mdf + u_agi + u_luk 
+    utext += u_mhp + u_mmp + u_hp + u_mp + u_tp + u_lvl
+    ttext = t_atk + t_def + t_mat + t_mdf + t_agi + t_luk 
+    ttext += t_mhp + t_mmp + t_hp + t_mp + t_tp + t_lvl
+    
+    if utext.empty? && ttext.empty?
+      change_color(normal_color)
+      if @@ref[@item.id].damage.type == 0
+        draw_text(x, y + @@fs * @@ln, width, line_height, "None", 2)
+      else; draw_text(x, y + @@fs * @@ln, width, line_height, "????", 2); end
+    end
+    change_color(system_color)
+    text = Vocab::usable_dmg_formula_label
+    draw_text(x, y + @@fs * @@ln, width, line_height, text)
+    @@ln += 1
+    change_color(normal_color)
+    unless utext.empty?
+      user_text = Vocab::formula_user + utext
+      draw_text(x, y + @@fs * @@ln, width, line_height, user_text, 2)
+      @@ln += 1; end
+    unless ttext.empty?
+      target_text = Vocab::formula_target + ttext
+      draw_text(x, y + @@fs * @@ln, width, line_height, target_text, 2)
+      @@ln += 1; end
+  end
+  #--------------------------------------------------------------------------
+  # * Draw Damage Variance
+  #--------------------------------------------------------------------------
+  def draw_usable_damage_variance(x, y, width)
+    return if @@ln == info_ln_max
+    change_color(system_color)
+    text = Vocab::usable_dmg_variance_label
+    draw_text(x, y + @@fs * @@ln, width, line_height, text)
+    change_color(normal_color)
+    text1 = @@ref[@item.id].damage.variance
+    if @@ref[@item.id].damage.type == 0
+        draw_text(x, y + @@fs * @@ln, width, line_height, "None", 2)
+    else; draw_text(x, y + @@fs * @@ln, width, line_height, text1, 2); end
+    @@ln += 1
+  end
+  #--------------------------------------------------------------------------
+  # * Draw Usable Speed
+  #--------------------------------------------------------------------------
+  def draw_usable_speed(x, y, width)
+    return if @@ln == info_ln_max
+    change_color(system_color)
+    text = Vocab::usable_speed_label
+    draw_text(x, y + @@fs * @@ln, width, line_height, text)
+    change_color(normal_color)
+    text1 = @@ref[@item.id].speed
+    text1 = "+" + text1.to_s if text1 > 0
+    draw_text(x, y + @@fs * @@ln, width, line_height, text1, 2)
+    @@ln += 1
+  end
+  #--------------------------------------------------------------------------
+  # * Draw Success Probability Rate
+  #--------------------------------------------------------------------------
+  def draw_usable_success_rate(x, y, width)
+    return if @@ln == info_ln_max
+    change_color(system_color)
+    text = Vocab::usable_success_label
+    draw_text(x, y + @@fs * @@ln, width, line_height, text)
+    change_color(normal_color)
+    text1 = @@ref[@item.id].success_rate
+    text1 = text1.to_s
+    text1 += " + " + Vocab.formula_user + " " + Vocab.xparam(0) if @item.physical?
+    draw_text(x, y + @@fs * @@ln, width, line_height, text1, 2)
+    @@ln += 1
+  end
+  #--------------------------------------------------------------------------
+  # * Draw # of Repeats
+  #--------------------------------------------------------------------------
+  def draw_usable_repeats(x, y, width)
+    return if @@ln == info_ln_max
+    change_color(system_color)
+    text = Vocab::usable_repeats_label
+    draw_text(x, y + @@fs * @@ln, width, line_height, text)
+    change_color(normal_color)
+    text1 = @@ref[@item.id].repeats
+    text1 = text1.to_s
+    draw_text(x, y + @@fs * @@ln, width, line_height, text1, 2)
+    @@ln += 1
+  end
+  #--------------------------------------------------------------------------
+  # * Draw TP Gain when Used
+  #--------------------------------------------------------------------------
+  def draw_usable_tp_gain(x, y, width)
+    return if @@ln == info_ln_max
+    change_color(system_color)
+    text = Vocab::usable_tp_gain_label
+    draw_text(x, y + @@fs * @@ln, width, line_height, text)
+    change_color(normal_color)
+    text1 = @@ref[@item.id].tp_gain
+    draw_text(x, y + @@fs * @@ln, width, line_height, text1, 2)
+    @@ln += 1
+  end
+  #--------------------------------------------------------------------------
+  # * Draw Hit Type
+  #--------------------------------------------------------------------------
+  def draw_usable_hit_type(x, y, width)
+    return if @@ln == info_ln_max
+    change_color(system_color)
+    text = Vocab::usable_hit_type_label
+    draw_text(x, y + @@fs * @@ln, width, line_height, text)
+    change_color(normal_color)
+    text1 = Vocab::hit_type(@@ref[@item.id].hit_type)
+    draw_text(x, y + @@fs * @@ln, width, line_height, text1, 2)
+    @@ln += 1
+  end
+#^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^#
+#   * Item Methods
+#   Used only by Items
+#^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^#
+  #--------------------------------------------------------------------------
+  # * Draw Item Type
+  #--------------------------------------------------------------------------
+  def draw_itype(x, y, width)
+    return if @@ln == info_ln_max
+    change_color(system_color)
+    draw_text(x, y + @@fs * @@ln, width, line_height, Vocab::item_type_label)
+    change_color(normal_color)
+    text1 = Vocab::item_type(@@ref[@item.id].itype_id)
+    draw_text(x, y + @@fs * @@ln, width, line_height, text1, 2)
+    @@ln += 1
+  end
+  #--------------------------------------------------------------------------
+  # * Draw Item Consumable
+  #--------------------------------------------------------------------------
+  def draw_item_consume(x, y, width)
+    return if @@ln == info_ln_max
+    change_color(system_color)
+    draw_text(x, y + @@fs * @@ln, width, line_height, Vocab::item_consume_label)
+    change_color(normal_color)
+    text1 = Vocab::consume(@@ref[@item.id].consumable)
+    draw_text(x, y + @@fs * @@ln, width, line_height, text1, 2)
+    @@ln += 1
+  end
+#^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^#
+#   * Skill Methods
+#   Used only by Skills
+#^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^#
+  #--------------------------------------------------------------------------
+  # * Draw Skill Required Weapon Type
+  #--------------------------------------------------------------------------
+  def draw_req_wtype(x, y, width)
+    return if @@ln == info_ln_max
+    wid1 = @@ref[@item.id].required_wtype_id1
+    wid2 = @@ref[@item.id].required_wtype_id2
+    return if wid1 == 0 && wid2 == 0
+    change_color(system_color)
+    text = Vocab::req_wtype_label
+    draw_text(x, y + @@fs * @@ln, width, line_height, text)
+    change_color(normal_color)
+    text1 = Vocab::wtype(wid1)
+    text2 = Vocab::wtype(wid2)
+    unless wid1 == 0
+      draw_text(x, y + @@fs * @@ln, width, line_height, text1, 2)
+      @@ln += 1; end
+    unless wid2 == 0
+      draw_text(x, y + @@fs * @@ln, width, line_height, text2, 2)
+      @@ln += 1; end
+  end
+  #--------------------------------------------------------------------------
+  # * Draw Skill Type
+  #--------------------------------------------------------------------------
+  def draw_stype_id(x, y, width)  
+    return if @@ln == info_ln_max
+    change_color(system_color)
+    text = Vocab::stype_id_label
+    draw_text(x, y + @@fs * @@ln, width, line_height, text)
+    change_color(normal_color)
+    text1 = Vocab::stype(@@ref[@item.id].stype_id)
+    draw_text(x, y + @@fs * @@ln, width, line_height, text1, 2)
+    @@ln += 1
+  end
+  #--------------------------------------------------------------------------
+  # * Draw Skill Use Cost
+  #--------------------------------------------------------------------------
+  def draw_skill_cost(x, y, width)
+    return if @@ln == info_ln_max
+    skill = @@ref[@item.id]
+    if skill.tp_cost > 0
+      change_color(system_color)
+      text = Vocab::tp_cost_label
+      draw_text(x, y + @@fs * @@ln, width, line_height, text)
+      change_color(normal_color)
+      text1 = skill.tp_cost
+      draw_text(x, y + @@fs * @@ln, width, line_height, text1, 2)
+      @@ln += 1; end
+    if skill.mp_cost > 0
+      change_color(system_color)
+      text = Vocab::mp_cost_label
+      draw_text(x, y + @@fs * @@ln, width, line_height, text)
+      change_color(normal_color)
+      text1 = skill.mp_cost
+      draw_text(x, y + @@fs * @@ln, width, line_height, text1, 2)
+      @@ln += 1; end
+  end
+  #--------------------------------------------------------------------------
+  # * Draw Include Skill Cost
+  #--------------------------------------------------------------------------
+  def include_skill_cost
+    if TIBB::Config::ShowSkillCost && SceneManager.scene_is?(Scene_Data)
+      return true
+    else; return false; end
+  end
+#^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^#
+#   * Effects Methods
+#   Used by both Items and Skills
+#^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^#
+  #--------------------------------------------------------------------------
+  # * Draw Effect HP Recovery
+  #--------------------------------------------------------------------------
+  def draw_effect_hp_recovery(x, y, width)
+    for effect in @item.effects
+      next unless effect.code == 11 #HP Recovery
+      next if @@ln == info_ln_max
+      next if effect.value1 == 0 && effect.value2 == 0
+      change_color(system_color)
+      text = Vocab::effects(effect.code)
+      draw_text(x, y + @@fs * @@ln, width, line_height, text)
+      change_color(normal_color)
+      unless effect.value1 == 0
+        text1 = (effect.value1 * 100).to_i
+        if text1 > 0; sign = "+"; else; sign = ""; end
+        text1 = sign + text1.to_s + "% of " + Vocab::param(0)
+        draw_text(x, y + @@fs * @@ln, width, line_height, text1, 2)
+        @@ln += 1; end
+      unless effect.value2 == 0
+        text2 = effect.value2.to_i
+        if text2 > 0; sign = "+"; else; sign = ""; end
+        text2 = sign + text2.to_s + " " + Vocab::hp_a
+        draw_text(x, y + @@fs * @@ln, width, line_height, text2, 2)
+        @@ln += 1; end
+    end
+  end
+  #--------------------------------------------------------------------------
+  # * Draw Effect MP Recovery
+  #--------------------------------------------------------------------------  
+  def draw_effect_mp_recovery(x, y, width)
+    for effect in @item.effects
+      next unless effect.code == 12 #MP Recovery
+      next if @@ln == info_ln_max
+      next if effect.value1 == 0 && effect.value2 == 0
+      change_color(system_color)
+      text = Vocab::effects(effect.code)
+      draw_text(x, y + @@fs * @@ln, width, line_height, text)
+      change_color(normal_color)
+      unless effect.value1 == 0
+        text1 = (effect.value1 * 100).to_i
+        text1 = "+" + text1.to_s if text1 > 0
+        text1 = text1.to_s + "% of " + Vocab::param(1)
+        draw_text(x, y + @@fs * @@ln, width, line_height, text1, 2)
+        @@ln += 1; end
+      unless effect.value2 == 0
+        text2 = effect.value2.to_i
+        text2 = "+" + text2.to_s if text2 > 0
+        text2 = text2.to_s + " " + Vocab::mp_a
+        draw_text(x, y + @@fs * @@ln, width, line_height, text2, 2)
+        @@ln += 1; end
+    end
+  end
+  #--------------------------------------------------------------------------
+  # * Draw Effect TP Recovery
+  #--------------------------------------------------------------------------
+  def draw_effect_tp_recovery(x, y, width)
+    for effect in @item.effects
+      next unless effect.code == 13 #TP Gain
+      next if @@ln == info_ln_max
+      next if effect.value1 == 0
+      change_color(system_color)
+      draw_text(x, y + @@fs * @@ln, width, line_height, Vocab::effects(effect.code))
+      change_color(normal_color)
+      text1 = effect.value1.to_i
+      text1 = "+" + text1.to_s if text1 > 0
+      text1 = text1.to_s + "% of " + Vocab::tp_a
+      draw_text(x, y + @@fs * @@ln, width, line_height, text1, 2)
+      @@ln += 1
+    end
+  end
+  #--------------------------------------------------------------------------
+  # * Draw Effect Add State
+  #--------------------------------------------------------------------------
+  def draw_effect_add_state(x, y, width)
+    title_drawn = false
+    for effect in @item.effects
+      next unless effect.code == 21 #Add State
+      next if @@ln == info_ln_max
+      next if effect.value1 == 0
+      unless title_drawn == true
+        change_color(system_color)
+        text = Vocab::effects(effect.code)
+        draw_text(x, y + @@fs * @@ln, width, line_height, text)
+        title_drawn = true; end
+      text1 = Vocab::states(effect.data_id)
+      value = (effect.value1 * 100).to_i
+      value = value.to_s
+      text1 = text1 + ": " + value + "%"
+      change_color(normal_color)
+      draw_text(x, y + @@fs * @@ln, width, line_height, text1, 2)
+      @@ln += 1
+    end
+  end
+  #--------------------------------------------------------------------------
+  # * Draw Effect Remove State
+  #--------------------------------------------------------------------------
+  def draw_effect_remove_state(x, y, width)
+    title_drawn = false
+    for effect in @item.effects
+      next unless effect.code == 22 #Remove State
+      next if @@ln == info_ln_max
+      next if effect.value1 == 0
+      unless title_drawn == true
+        change_color(system_color)
+        text = Vocab::effects(effect.code)
+        draw_text(x, y + @@fs * @@ln, width, line_height, text)
+        title_drawn = true; end
+      text1 = Vocab::states(effect.data_id)
+      value = (effect.value1 * 100).to_i
+      value = value.to_s
+      text1 = text1 + ": " + value + "%"
+      change_color(normal_color)
+      draw_text(x, y + @@fs * @@ln, width, line_height, text1, 2)
+      @@ln += 1
+    end
+  end
+  #--------------------------------------------------------------------------
+  # * Draw Effect Add Buff
+  #--------------------------------------------------------------------------
+  def draw_effect_add_buff(x, y, width)
+    title_drawn = false
+    for effect in @item.effects
+      next unless effect.code == 31 #Add Buff
+      next if @@ln == info_ln_max
+      next if effect.value1 == 0
+      unless title_drawn == true
+        change_color(system_color)
+        text = Vocab::effects(effect.code)
+        draw_text(x, y + @@fs * @@ln, width, line_height, text)
+        title_drawn = true; end
+      text1 = Vocab::param(effect.data_id)
+      value = effect.value1.to_i
+      value = value.to_s
+      change_color(normal_color)
+      text1 = text1 + ": " + value + Vocab.add_buff_suffix
+      draw_text(x, y + @@fs * @@ln, width, line_height, text1, 2)
+      @@ln += 1
+    end
+  end
+  #--------------------------------------------------------------------------
+  # * Draw Effect Add DeBuff
+  #--------------------------------------------------------------------------
+  def draw_effect_add_debuff(x, y, width)
+    title_drawn = false
+    for effect in @item.effects
+      next unless effect.code == 32 #Add DeBuff
+      next if @@ln == info_ln_max
+      next if effect.value1 == 0
+      unless title_drawn == true
+        change_color(system_color)
+        text = Vocab::effects(effect.code)
+        draw_text(x, y + @@fs * @@ln, width, line_height, text)
+        title_drawn = true; end
+      text1 = Vocab::param(effect.data_id)
+      value = effect.value1.to_i
+      value = value.to_s
+      change_color(normal_color)
+      text1 = text1 + ": " + value + Vocab.add_buff_suffix
+      draw_text(x, y + @@fs * @@ln, width, line_height, text1, 2)
+      @@ln += 1
+    end
+  end
+  #--------------------------------------------------------------------------
+  # * Draw Effect Remove Buff
+  #--------------------------------------------------------------------------
+  def draw_effect_remove_buff(x, y, width)
+    title_drawn = false
+    for effect in @item.effects
+      next unless effect.code == 33 #Remove Buff
+      next if @@ln == info_ln_max
+      unless title_drawn == true
+        change_color(system_color)
+        text = Vocab::effects(effect.code)
+        draw_text(x, y + @@fs * @@ln, width, line_height, text)
+        title_drawn = true; end
+      text1 = Vocab::param(effect.data_id)
+      change_color(normal_color)
+      draw_text(x, y + @@fs * @@ln, width, line_height, text1, 2)
+      @@ln += 1
+    end
+  end
+  #--------------------------------------------------------------------------
+  # * Draw Effect Remove DeBuff
+  #--------------------------------------------------------------------------
+  def draw_effect_remove_debuff(x, y, width)
+    title_drawn = false
+    for effect in @item.effects
+      next unless effect.code == 34 #Remove DeBuff
+      next if @@ln == info_ln_max
+      unless title_drawn == true
+        change_color(system_color)
+        text = Vocab::effects(effect.code)
+        draw_text(x, y + @@fs * @@ln, width, line_height, text)
+        title_drawn = true; end
+      text1 = Vocab::param(effect.data_id)
+      change_color(normal_color)
+      draw_text(x, y + @@fs * @@ln, width, line_height, text1, 2)
+      @@ln += 1
+    end
+  end
+  #--------------------------------------------------------------------------
+  # * Draw Effect Special Effect - Escape and Common Event
+  #--------------------------------------------------------------------------
+  def draw_effect_special_effect(x, y, width)  
+    title_drawn = false
+    for effect in @item.effects 
+      next unless effect.code == 41 #Special Effect - Escape
+      next if @@ln == info_ln_max
+      unless title_drawn == true
+        change_color(system_color)
+        text = Vocab::effects(effect.code)
+        draw_text(x, y + @@fs * @@ln, width, line_height, text)
+        title_drawn = true; end
+      text1 = Vocab::escape
+      change_color(normal_color)
+      draw_text(x, y + @@fs * @@ln, width, line_height, text1, 2)
+      @@ln += 1
+    end
+    for effect in @item.effects
+      next unless effect.code == 44 #Common Event
+      next if @@ln == info_ln_max
+      unless title_drawn == true
+        change_color(system_color)
+        text = Vocab::effects(effect.code)
+        draw_text(x, y + @@fs * @@ln, width, line_height, text)
+        title_drawn = true; end
+      text1 = $data_common_events[effect.data_id].name
+      change_color(normal_color)
+      draw_text(x, y + @@fs * @@ln, width, line_height, text1, 2)
+      @@ln += 1
+    end
+  end
+  #--------------------------------------------------------------------------
+  # * Draw Effect Parameter Growth
+  #--------------------------------------------------------------------------
+  def draw_effect_grow(x, y, width)
+    title_drawn = false
+    for effect in @item.effects
+      next unless effect.code == 42 #Grow
+      next if @@ln == info_ln_max
+      next if effect.value1 == 0
+      unless title_drawn == true
+        change_color(system_color)
+        text = Vocab::effects(effect.code)
+        draw_text(x, y + @@fs * @@ln, width, line_height, text)
+        title_drawn = true; end
+      text1 = Vocab::param(effect.data_id)
+      value = effect.value1.to_i
+      value = value.to_s
+      change_color(normal_color)
+      text1 = "+" + value + " to " + text1
+      draw_text(x, y + @@fs * @@ln, width, line_height, text1, 2)
+      @@ln += 1
+    end
+  end
+  #--------------------------------------------------------------------------
+  # * Draw Effect Learn Skills
+  #--------------------------------------------------------------------------
+  def draw_effect_learn_skill(x, y, width)
+    title_drawn = false
+    for effect in @item.effects
+      next unless effect.code == 43 #Learn Skill
+      next if @@ln == info_ln_max
+      unless title_drawn == true
+        change_color(system_color)
+        text = Vocab::effects(effect.code)
+        draw_text(x, y + @@fs * @@ln, width, line_height, text)
+        title_drawn = true
+      end
+      text1 = $data_skills[effect.data_id].name
+      change_color(normal_color)
+      draw_text(x, y + @@fs * @@ln, width, line_height, text1, 2)
+      @@ln += 1
+    end      
+  end
+end #Windows Info
