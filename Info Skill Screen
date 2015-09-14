@@ -1,0 +1,177 @@
+#==============================================================================
+# ▼ Info Skill Screen ver. 1.00
+# - Engine: RPG Maker Ace
+# - Created: 2015.09.13
+# - Requires: TIBB Menu Base 1.01 & Info Window Base 1.00
+# - Terms of Use:  Free to use commercially or non-commercially with credit
+#      to The Infamous Bon Bon.
+# - Find Me @: https://ccrgeek.wordpress.com/ or http://forums.rpgmakerweb.com/
+#==============================================================================
+
+$imported = {} if $imported.nil?
+$imported["TIBB-InfoSkillScreen"] = true
+
+#==============================================================================
+# ▼ Updates
+# -----------------------------------------------------------------------------
+# None
+#==============================================================================
+#==============================================================================
+# ▼ Introduction
+# -----------------------------------------------------------------------------
+# This allows you to use the Info Window in the Skill menu screen.
+#==============================================================================
+#==============================================================================
+# ▼ Instructions
+# -----------------------------------------------------------------------------
+# Should be Plug n' Play once you have configured the base script.
+#==============================================================================
+#==============================================================================
+# ▼ Compatibility
+# -----------------------------------------------------------------------------
+# Overwritten methods:
+#   Scene_Skill - Create Item Window
+# Aliased methods:
+#   Scene_Skill - Start Processing
+#   Scene_Skill - [Skill] Command
+#   Scene_Skill - Item [OK]
+#   Scene_Skill - Item [Cancel]
+#   Scene_Skill - Use Item
+#==============================================================================
+#==============================================================================
+# ** Window_InfoSkillList
+#------------------------------------------------------------------------------
+#  This window is for displaying a list of available skills on the skill window.
+#  Modified to be compatible with the Info Window.
+#==============================================================================
+class Window_InfoSkillList < Window_SkillList #< Window_Selectable
+  #--------------------------------------------------------------------------
+  # * Public Instance Variables
+  #--------------------------------------------------------------------------
+  attr_reader   :info_window            # Info window
+  #--------------------------------------------------------------------------
+  # * Get Digit Count
+  #--------------------------------------------------------------------------
+  def col_max
+    return 1
+  end
+  #--------------------------------------------------------------------------
+  # * Set Status Window
+  #--------------------------------------------------------------------------
+  def info_window=(info_window)
+    @info_window = info_window
+    call_update_help
+  end  
+  #--------------------------------------------------------------------------
+  # --Alias Method--
+  # * Update Help Text
+  #--------------------------------------------------------------------------
+  alias info_update_help update_help
+  def update_help
+    info_update_help
+    @info_window.item = item if @info_window
+  end
+end #class Window_InfoSkillList
+#==============================================================================
+# ** Window_InfoMenuSkill
+#------------------------------------------------------------------------------
+#  This window displays info from the database for Skills.  The Skill screen
+# has slightly less room than the Item screen, so 'info_ln_max' needed to be
+# made smaller.
+#==============================================================================
+class Window_InfoMenuSkill < Window_Info 
+  #--------------------------------------------------------------------------
+  # * Get Info Max Lines
+  # Because we don't want it to draw lines into change page text and beyond.
+  #--------------------------------------------------------------------------
+  def info_ln_max
+    return 11
+  end
+end #class Window_InfoMenuSkill
+#==============================================================================
+# ** Scene_Skill
+#------------------------------------------------------------------------------
+#  This class performs skill screen processing. Skills are handled as items for
+# the sake of process sharing.
+#==============================================================================
+class Scene_Skill < Scene_ItemBase
+  #--------------------------------------------------------------------------
+  # --Alias Method--
+  # * Start Processing
+  #--------------------------------------------------------------------------
+  alias info_start start
+  def start
+    info_start
+    create_info_window
+  end
+  #--------------------------------------------------------------------------
+  # --Overwrite Method--
+  # * Create Item Window
+  #--------------------------------------------------------------------------
+  def create_item_window
+    wx = 0
+    wy = @status_window.y + @status_window.height
+    ww = Graphics.width / 2
+    wh = Graphics.height - wy
+    @item_window = Window_InfoSkillList.new(wx, wy, ww, wh)
+    @item_window.actor = @actor
+    @item_window.viewport = @viewport
+    @item_window.help_window = @help_window
+    @item_window.set_handler(:ok,     method(:on_item_ok))
+    @item_window.set_handler(:cancel, method(:on_item_cancel))
+    @command_window.skill_window = @item_window
+  end
+  #--------------------------------------------------------------------------
+  # --New Method--
+  # * Create Info Window
+  #--------------------------------------------------------------------------
+  def create_info_window
+    wx = Graphics.width / 2
+    wy = @command_window.y + @command_window.height
+    ww = Graphics.width / 2
+    wh = Graphics.height - wy
+    @info_window = Window_InfoMenuSkill.new(wx, wy, ww, wh)
+    @info_window.viewport = @viewport
+    @item_window.info_window = @info_window
+    @info_window.item = @item_window.item
+  end
+  #--------------------------------------------------------------------------
+  # --Alias Method--
+  # * [Skill] Command
+  #--------------------------------------------------------------------------
+  alias info_command_skill command_skill
+  def command_skill
+    info_command_skill
+    @info_window.item = @item_window.item
+    @info_window.refresh
+  end
+  #--------------------------------------------------------------------------
+  # --Alias Method--
+  # * Item [OK]
+  #--------------------------------------------------------------------------
+  alias info_on_item_ok on_item_ok
+  def on_item_ok
+    info_on_item_ok
+    @info_window.item = @item_window.item
+    @info_window.refresh
+  end
+  #--------------------------------------------------------------------------
+  # --Alias Method--
+  # * Item [Cancel]
+  #--------------------------------------------------------------------------
+  alias info_on_item_cancel on_item_cancel
+  def on_item_cancel
+    info_on_item_cancel
+    @info_window.item = nil
+    @info_window.refresh
+  end
+  #--------------------------------------------------------------------------
+  # --Alias Method--
+  # * Use Item
+  #--------------------------------------------------------------------------
+  alias info_use_item use_item
+  def use_item
+    info_use_item
+    @info_window.refresh
+  end
+end #Scene_Skill
