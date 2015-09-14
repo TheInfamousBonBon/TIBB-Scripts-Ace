@@ -1,0 +1,524 @@
+#==============================================================================
+# ▼ TIBB Menu Base ver. 1.02
+# - Engine: RPG Maker Ace
+# - Created: 2015.08.29
+# - Requires: n/a
+# - Terms of Use:  Free to use commercially or non-commercially with credit
+#      to The Infamous Bon Bon.
+# - Find Me @: https://ccrgeek.wordpress.com/ or http://forums.rpgmakerweb.com/
+#==============================================================================
+
+$imported = {} if $imported.nil?
+$imported["TIBB-MenuBase"] = true
+
+#==============================================================================
+# ▼ Updates
+# -----------------------------------------------------------------------------
+# 2015.09.02 - Added Config Module for various Bonus, Flip, and Block too reduce
+#             the need to go through scripts.  Added $imported method.
+# 2015.09.13 - Moved Block names to Vocab.
+#==============================================================================
+#==============================================================================
+# ▼ Introduction
+# -----------------------------------------------------------------------------
+# Includes Vocab module and Window_Base Add-On's that I made for a tutorial.
+# This script is a Base or Core script for other Menu Scripts.  This does very
+# little on its own.
+#==============================================================================
+#==============================================================================
+# ▼ Instructions
+# -----------------------------------------------------------------------------
+# Edit the settings in the module below as you see fit.
+#==============================================================================
+#==============================================================================
+# ▼ Compatibility
+# -----------------------------------------------------------------------------
+# Overwritten methods:
+#   Window_Base - Draw TP
+# Aliased methods:
+#   none
+#==============================================================================
+
+#==============================================================================
+# ** Config
+#------------------------------------------------------------------------------
+# So here we have some constants with various versions of Bonus and Flip.
+# If Bonus is true then the range for the values is -100% to +900%
+# If Flip is true as well then the range for the values is -900% to +100%
+# Some scripts will automatically have some values set up in a Bonus style
+# so it is still necessary to set the Flip value to the way you desire.
+# Some scripts allow you to set the Bonus style (like my Status Screen and Equip
+# Screen scripts) because the information needs to have options in those
+# instances for the info to look right.  Try changing these around a little
+# and see what works best for your game and how you phrase your values.
+#
+# Here you can also edit the title text color and the Change Page text.
+#==============================================================================
+module TIBB
+  module Config
+    # Set the color used for title text and the line to either side.
+    TitleTextColor = 0 # text_color(n)
+    # Set S Parameter Rate Bonus Style, can be true or false
+    S_Bonus = true
+    # Set S Parameter Rate Value flipped, can be true or false
+    S_Flip = false
+    # Set State Rate Bonus Style, can be true or false
+    St_Bonus = true
+    # Set State Rate Value flipped, can be true or false
+    St_Flip = true
+    # Set Element Rate Bonus Style, can be true or false
+    E_Bonus = true
+    # Set Element Rate Value flipped, can be true or false
+    E_Flip = true
+    # Set Normal Parameter Rate Bonus Style can be true or false
+    N_RateBonus = true 
+    # Set Normal Parameter Rate Value flipped can be true or false
+    N_RateFlip = true
+    # Set DeBuff Rate Bonus Style can be true or false
+    DeBu_Bonus = true
+    # Set DeBuff Rate Value flipped can be true or false
+    DeBu_Flip = true
+    # Set text for changing pages
+    Change_Pg = "SHIFT: More Info"
+  end
+end
+#==============================================================================
+# ** Vocab
+#------------------------------------------------------------------------------
+#  This module defines terms and messages.
+#==============================================================================
+module Vocab
+  #--------------------------------------------------------------------------
+  # --New Method--
+  # * Title Text
+  #--------------------------------------------------------------------------
+  def self.nparameter_title;      "Parameters"; end
+  def self.xparameter_title;      "X-Parameters"; end
+  def self.sparameter_title;      "S-Parameters"; end
+  def self.state_rate_title;      "Vs. States"; end
+  def self.element_rate_title;    "Vs. Elements"; end
+  def self.nparameter_rate_title; "Parameter Modifiers"; end
+  def self.debuff_rate_title;     "Vs. DeBuffs"; end
+  #--------------------------------------------------------------------------
+  # --New Method--
+  # * Command Text
+  #--------------------------------------------------------------------------
+  def self.class_command; "Classes"; end
+  def self.state_command; "States"; end
+  def self.enemy_command; "Enemies"; end
+  #--------------------------------------------------------------------------
+  # --New Method--
+  # * Labels
+  #--------------------------------------------------------------------------
+  def self.weapon_label;  "Weapon"; end
+  def self.armor_label;   "Armor"; end
+  def self.skill_label;   "Skill"; end
+  def self.item_label;    "Item"; end
+  def self.buff_label;    "Buff"; end
+  def self.debuff_label;  "DeBuff"; end
+  def self.element_label; "Element"; end
+  def self.state_label;   "State"; end
+  def self.class_label;   "Class"; end
+  #--------------------------------------------------------------------------
+  # --New Method--
+  # * Normal Parameters
+  #--------------------------------------------------------------------------
+  def self.param(param_id)
+    return "M" + self.tp_a if param_id == 8       #Max TP Maximum Tech Points
+    $data_system.terms.params[param_id]
+  end
+  #--------------------------------------------------------------------------
+  # --New Method--
+  # * X-Parameters
+  #--------------------------------------------------------------------------
+  def self.xparam(xparam_id)
+    case xparam_id
+    when 0; "Hit"                       # HIT Hit Rate
+    when 1; "Evasion"                   # EVA Evasion Rate
+    when 2; "Critical"                  # CRI Critical Hit Rate
+    when 3; "Cri Eva"                   # CEV Critical Evasion Rate
+    when 4; "Mag Eva"                   # MEV Magic Evasion Rate
+    when 5; "Mag Ref"                   # MRF Magic Relfection Rate
+    when 6; "Cnt Atk"                   # CNT Counter Attack Rate
+    when 7; self.hp_a + " Regen"        # HRG Hp Regeneration Rate
+    when 8; self.mp_a + " Regen"        # MRG Mp Regeneration Rate
+    when 9; self.tp_a + " Regen"        # TRG Tp Regeneration Rate
+    else; return ""; end
+  end
+  #--------------------------------------------------------------------------
+  # --New Method--
+  # * S-Parameters
+  #--------------------------------------------------------------------------
+  def self.sparam(sparam_id)
+    case sparam_id  
+    when 0; "Target"                    # TGR  TarGet Rate
+    when 1; "Guard"                     # GRD  GuaRD effect rate
+    when 2; "Recovery"                  # REC  RECovery effect rate
+    when 3; "Med Lore"                  # PHA  PHArmacology
+    when 4; self.mp_a + " Cost"         # MCR  Mp Cost Rate
+    when 5; self.tp_a + " Charge"       # TCR  Tp Charge Rate
+    when 6; "Phy Dmg"                   # PDR  Physical Damage Rate
+    when 7; "Mag Dmg"                   # MDR  Magical Damage Rate
+    when 8; "Floor Dmg"                 # FDR  Floor Damage Rate
+    when 9; "Exp Rate"                  # EXR  EXperience Rate
+    else; return ""; end
+  end
+  #--------------------------------------------------------------------------
+  # --New Method--
+  # * Elements
+  #--------------------------------------------------------------------------
+  def self.elements(element_id)
+    if    element_id == -1; "User's"
+    elsif element_id ==  0; "None"
+    else; $data_system.elements[element_id]; end
+  end
+  #--------------------------------------------------------------------------
+  # --New Method--
+  # * States
+  #--------------------------------------------------------------------------
+  def self.states(state_id)
+    return "User's" if state_id == 0
+    $data_states[state_id].name
+  end
+  #--------------------------------------------------------------------------
+  # --New Method--
+  # * Skill Types
+  #--------------------------------------------------------------------------
+  def self.stype(item_id); $data_system.skill_types[item_id]; end
+  #--------------------------------------------------------------------------
+  # --New Method--
+  # * Weapon Types
+  #--------------------------------------------------------------------------
+  def self.wtype(item_id); $data_system.weapon_types[item_id]; end
+  #--------------------------------------------------------------------------
+  # --New Method--
+  # * Armor Types
+  #--------------------------------------------------------------------------
+  def self.atype(item_id); $data_system.armor_types[item_id]; end
+end # module Vocab
+#==============================================================================
+# ** Window_Base
+#------------------------------------------------------------------------------
+#  This is a super class of all windows within the game.
+#==============================================================================
+class Window_Base < Window
+  #--------------------------------------------------------------------------
+  # --New Method--
+  # * Draw Normal Parameter Name
+  #--------------------------------------------------------------------------
+  def draw_nparam_name(x, y, param_id, width = 70)
+    change_color(system_color)
+    name = Vocab.param(param_id)
+    draw_text(x, y, width, line_height, name)
+  end
+  #--------------------------------------------------------------------------
+  # --New Method--
+  # * Draw Current Normal Parameter
+  #--------------------------------------------------------------------------
+  def draw_current_nparam(actor, x, y, param_id, width = 40)
+     change_color(normal_color)
+    case param_id
+      when 0; value = actor.mhp          # MHP      Maximum Hit Points
+      when 1; value = actor.mmp          # MMP      Maximum Magic Points
+      when 2; value = actor.atk          # ATK      ATtacK power
+      when 3; value = actor.def          # DEF      DEFense power
+      when 4; value = actor.mat          # MAT      Magic ATtack power
+      when 5; value = actor.mdf          # MDF      Magic DeFense power
+      when 6; value = actor.agi          # AGI      AGIlity
+      when 7; value = actor.luk          # LUK      LUcK
+      when 8; value = actor.max_tp       # MAX_TP   MAXimum Tech Points
+      else; value = 0
+      end
+    draw_text(x, y, width, line_height, value, 2)
+  end  
+  #--------------------------------------------------------------------------
+  # --New Method--
+  # * Draw Menu Normal Parameter
+  #--------------------------------------------------------------------------
+  def draw_menu_nparam(actor, x, y, width, param_id)
+    draw_nparam_name(x, y, param_id, width)
+    draw_current_nparam(actor, x, y, param_id, width)
+  end
+  #--------------------------------------------------------------------------
+  # --New Method--
+  # * Draw XParameter Name 
+  #--------------------------------------------------------------------------  
+  def draw_xparam_name(x, y, param_id, width = 70)
+    change_color(system_color)
+    name = Vocab.xparam(param_id)
+    draw_text(x, y, width, line_height, name)
+  end
+  #--------------------------------------------------------------------------
+  # --New Method--
+  # * Draw Current XParameter
+  #--------------------------------------------------------------------------
+  def draw_current_xparam(actor, x, y, param_id, width = 40)
+    change_color(normal_color)
+    #value = @actor.xparam(param_id)
+    case param_id
+    when 0; value = actor.hit         # HIT Hit Rate
+    when 1; value = actor.eva         # EVA Evasion Rate
+    when 2; value = actor.cri         # CRI Critical Hit Rate
+    when 3; value = actor.cev         # CEV Critical Evasion Rate
+    when 4; value = actor.mev         # MEV Magic Evasion Rate
+    when 5; value = actor.mrf         # MRF Magic Relfection Rate
+    when 6; value = actor.cnt         # CNT Counter Attack Rate
+    when 7; value = actor.hrg         # HRG Hp Regeneration Rate
+    when 8; value = actor.mrg         # MRG Mp Regeneration Rate
+    when 9; value = actor.trg         # TRG Tp Regeneration Rate
+    else; value = 0
+    end
+    value = (value * 100).to_i
+    text = value.to_s + "%"
+    draw_text(x, y, width, line_height, text, 2)
+  end
+  #--------------------------------------------------------------------------
+  # --New Method--
+  # * Draw Menu X-Parameter
+  #--------------------------------------------------------------------------
+  def draw_menu_xparam(actor, x, y, width, param_id)
+    draw_xparam_name(x, y, param_id, width)
+    draw_current_xparam(actor, x, y, param_id, width)
+  end
+  #--------------------------------------------------------------------------
+  # --New Method--
+  # * Draw S-Parameter Name
+  #--------------------------------------------------------------------------  
+  def draw_sparam_name(x, y, param_id, width = 70)
+    change_color(system_color)
+    name = Vocab.sparam(param_id)
+    draw_text(x, y, width, line_height, name)
+  end  
+  #--------------------------------------------------------------------------
+  # --New Method--
+  # * Draw Current S-Parameter
+  #--------------------------------------------------------------------------
+  def draw_current_sparam(actor, x, y, param_id, width = 40,
+                          bonus = TIBB::Config::S_Bonus, 
+                          flipped = TIBB::Config::S_Flip)
+    change_color(normal_color)
+    case param_id  
+    when 0; value = actor.tgr      # TGR  TarGet Rate
+    when 1; value = actor.grd      # GRD  GuaRD effect rate
+    when 2; value = actor.rec      # REC  RECovery effect rate
+    when 3; value = actor.pha      # PHA  PHArmacology
+    when 4; value = actor.mcr      # MCR  Mp Cost Rate
+    when 5; value = actor.tcr      # TCR  Tp Charge Rate
+    when 6; value = actor.pdr      # PDR  Physical Damage Rate
+    when 7; value = actor.mdr      # MDR  Magical Damage Rate
+    when 8; value = actor.fdr      # FDR  Floor Damage Rate
+    when 9; value = actor.exr      # EXR  EXperience Rate
+    else; value = 0
+    end
+    value = (value * 100).to_i
+    if bonus
+      value -= 100
+      value *= -1 if flipped
+      if value > 0
+        sign = "+"
+        text = sign + value.to_s + "%"
+      elsif value == 0
+        text = "-- %"
+      else
+        text = value.to_s + "%"
+      end
+    else
+      text = value.to_s + "%"
+    end
+    draw_text(x, y, width, line_height, text, 2)
+  end
+  #--------------------------------------------------------------------------
+  # --New Method--
+  # * Draw Menu Sp-Parameter
+  #--------------------------------------------------------------------------
+  def draw_menu_sparam(actor, x, y, width, param_id)
+    draw_sparam_name(x, y, param_id, width)
+    draw_current_sparam(actor, x, y, param_id, width)
+  end
+  #--------------------------------------------------------------------------
+  # --New Method--
+  # * Draw Element Name
+  #--------------------------------------------------------------------------
+  def draw_element_name(x, y, param_id, width = 70)
+    change_color(system_color)
+    draw_text(x, y, width, line_height, Vocab.elements(param_id))
+  end
+  #--------------------------------------------------------------------------
+  # --New Method--
+  # Draw Current Element Rate
+  #--------------------------------------------------------------------------
+  def draw_current_element_rate(actor,x, y, param_id, width = 40, 
+                                bonus = TIBB::Config::E_Bonus,
+                                flipped = TIBB::Config::E_Flip)
+    change_color(normal_color)
+    value = (actor.element_rate(param_id) * 100).to_i
+    if bonus
+      value -= 100
+      value *= -1 if flipped
+      if value > 0
+        sign = "+"
+        text = sign + value.to_s + "%"
+      elsif value == 0
+        text = "-- %"
+      else
+        text = value.to_s + "%"
+      end
+    else
+      text = value.to_s + "%"
+    end
+    draw_text(x, y, width, line_height, text, 2)
+  end
+  #--------------------------------------------------------------------------
+  # --New Method--
+  # * Draw Menu Element
+  #--------------------------------------------------------------------------
+  def draw_menu_element(actor, x, y, width, param_id)
+    draw_element_name(x, y, param_id, width)
+    draw_current_element_rate(actor, x, y, param_id, width)
+  end    
+  #--------------------------------------------------------------------------
+  # --New Method--
+  # * Draw State Name
+  #--------------------------------------------------------------------------
+  def draw_state_name(x, y, param_id, width = 70)
+    change_color(system_color)
+    draw_text(x, y, width, line_height, Vocab.states(param_id))
+  end
+  #--------------------------------------------------------------------------
+  # --New Method--
+  # Draw Current State Rate
+  #--------------------------------------------------------------------------
+  def draw_current_state_rate(actor, x, y, param_id, width = 40,
+                              bonus = TIBB::Config::St_Bonus, 
+                              flipped = TIBB::Config::St_Flip)
+    change_color(normal_color)
+    value = (actor.state_rate(param_id) * 100).to_i
+    value = 0 if @actor.state_resist?(param_id)
+    if bonus
+      value -= 100
+      value *= -1 if flipped
+      if value > 0
+        sign = "+"
+        text = sign + value.to_s + "%"
+      elsif value == 0
+        text = "-- %"
+      else
+        text = value.to_s + "%"
+      end
+    else
+      text = value.to_s + "%"
+    end
+      draw_text(x, y, width, line_height, text, 2)
+  end
+  #--------------------------------------------------------------------------
+  # --New Method--
+  # * Draw Menu State
+  #--------------------------------------------------------------------------
+  def draw_menu_state(actor, x, y, width, param_id)
+    draw_state_name(x, y, param_id, width)
+    draw_current_state_rate(actor, x, y, param_id, width)
+  end  
+  #--------------------------------------------------------------------------
+  # --Overwrite Method--
+  # * Draw TP
+  #--------------------------------------------------------------------------
+  def draw_actor_tp(actor, x, y, width = 124)
+    draw_gauge(x, y, width, actor.tp_rate, tp_gauge_color1, tp_gauge_color2)
+    change_color(system_color)
+    draw_text(x, y, width, line_height, Vocab::tp_a)
+    draw_current_and_max_values(x, y, width, actor.tp.to_i, actor.max_tp.to_i,
+    tp_color(actor), normal_color)
+  end
+  #--------------------------------------------------------------------------
+  # --New Method--
+  # Draw Variable Info
+  #--------------------------------------------------------------------------    
+  def draw_variable_info(x, y, vid, width)
+    draw_variable_name(x, y, vid, width)
+    draw_variable_value(x, y, vid, width)
+  end
+  #--------------------------------------------------------------------------
+  # --New Method--
+  # Draw Variable Name
+  #--------------------------------------------------------------------------   
+  def draw_variable_name(x, y, vid, width = 100)
+    change_color(system_color)
+    draw_text(x, y, width, line_height, $data_system.variables[vid])
+  end    
+  #--------------------------------------------------------------------------
+  # --New Method--
+  # Draw Variable Value
+  #--------------------------------------------------------------------------     
+  def draw_variable_value(x, y, vid, width = 100)
+    change_color(normal_color)
+    draw_text(x, y, width, line_height, $game_variables[vid], 2)
+  end
+  #--------------------------------------------------------------------------
+  # --New Method--
+  # *Draw Block Title
+  #--------------------------------------------------------------------------
+  def draw_block_title(x, y, title_text, width = 200, alignment = 1)
+    change_color(text_color(TIBB::Config::TitleTextColor))
+    line_title = title_text
+    lw = text_size(line_title).width
+    contents.font.italic = true
+    contents.font.outline = false
+    contents.font.shadow = true    
+    if alignment == 1
+      draw_horz_line_alt(x, y, width / 2 - lw / 2 - 5)
+      draw_horz_line_alt(x + width / 2 + lw / 2 + 5, y, width / 2 - lw / 2 - 5)
+      draw_text(x, y, width, line_height, line_title, 1)
+    elsif alignment == 0
+      draw_horz_line_alt(x, y, 12)
+      draw_horz_line_alt(x + 22 + lw, y, width - lw - 22)
+      draw_text(x + 17, y, width, line_height, line_title)
+    elsif alignment == 2
+      draw_horz_line_alt(x, y, width - lw - 22)
+      draw_horz_line_alt(x + width - 12, y, 12)
+      draw_text(x, y, width - 17, line_height, line_title, 2)
+    end
+    contents.font.shadow = false
+    contents.font.outline = true
+    contents.font.italic = false
+  end
+  #--------------------------------------------------------------------------
+  # --New Method--
+  # * Draw Horizontal Line Alt
+  #--------------------------------------------------------------------------
+  def draw_horz_line_alt(x, y, width, line_y = line_height / 2 - 1)
+    contents.fill_rect(x, y + line_y, width, 2, line_color_alt)
+  end
+  #--------------------------------------------------------------------------
+  # --New Method--
+  # * Draw Vertical Line Alt
+  #--------------------------------------------------------------------------
+  def draw_vert_line_alt(x, y, height)
+    contents.fill_rect(x, y, 2, height, line_color_alt)
+  end
+  #--------------------------------------------------------------------------
+  # --New Method--
+  # * Get Color of Vertical & Horizontal Line Alt
+  #--------------------------------------------------------------------------
+  def line_color_alt
+    color = text_color(TIBB::Config::TitleTextColor)
+    color.alpha = 48
+    color
+  end
+  #--------------------------------------------------------------------------
+  # * Draw Change Page Text
+  # Draws the text at the bottom of the window.
+  #--------------------------------------------------------------------------
+  def draw_page_change_text
+    contents.font.italic = true
+    contents.font.outline = false
+    contents.font.shadow = true
+    change_color(text_color(3), false)
+    rect = Rect.new(0, contents.height - contents.font.size, contents.width,
+                        line_height)
+    text = TIBB::Config::Change_Pg
+    draw_text(rect, text, 2)
+    contents.font.italic = false
+    contents.font.outline = true
+    contents.font.shadow = false 
+  end
+end #class Window_Base < Window
