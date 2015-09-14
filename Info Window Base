@@ -533,6 +533,9 @@ class Window_Info < Window_Base
     width = (contents.width - 12)
     draw_usable_info(4, 0, width) if @item.is_a?(RPG::UsableItem)
     draw_equip_info(4, 0, width)  if @item.is_a?(RPG::EquipItem)
+    draw_state_info(4, 0, width)  if @item.is_a?(RPG::State)
+    draw_enemy_info(4, 0, width)  if @item.is_a?(RPG::Enemy)
+    draw_class_info(4, 0, width)  if @item.is_a?(RPG::Class)
     draw_page_change_text if info_page_max > 1 && @item.is_a?(RPG::BaseItem)
   end
   #--------------------------------------------------------------------------
