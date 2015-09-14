@@ -1,8 +1,8 @@
 #==============================================================================
-# ▼ Info Window Base ver. 1.00
+# ▼ Info Window Base ver. 1.01
 # - Engine: RPG Maker Ace
 # - Created: 2015.09.12
-# - Requires: TIBB Menu Base 1.01
+# - Requires: TIBB Menu Base 1.02
 # - Terms of Use:  Free to use commercially or non-commercially with credit
 #      to The Infamous Bon Bon.
 # - Find Me @: https://ccrgeek.wordpress.com/ or http://forums.rpgmakerweb.com/
@@ -14,7 +14,7 @@ $imported["TIBB-InfoWindowBase"] = true
 #==============================================================================
 # ▼ Updates
 # -----------------------------------------------------------------------------
-# None
+# 2015.09.12 - Minor changes to Vocab module.
 #==============================================================================
 #==============================================================================
 # ▼ Introduction
@@ -87,27 +87,27 @@ module Vocab
   # and Elements which are defined in TIBB Menu Base
   def self.feature(feature_code)
     case feature_code
-    when 11; "Vs. Element"              # Element Rate
-    when 12; "Vs. Debuff"               # Debuff Rate
-    when 13; "Vs. State"                # State Rate
-    when 14; "Nullify State"            # State Resist   
-    when 31; "Atk Element"              # Atk Element
-    when 32; "Atk State"                # Atk State
-    when 33; "Atk Speed"                # Atk Speed
-    when 34; "Additional Attacks"       # Atk Times+
-    when 41; "Add Skill Type"           # Add Skill Type
-    when 42; "Seal Skill Type"          # Disable Skill Type
-    when 43; "Learn Skill"              # Add Skill
-    when 44; "Seal Skill"               # Disable Skill
-    when 51; "Equip Weapon Type"        # Equip Weapon
-    when 52; "Equip Armor Type"         # Equip Armor 
-    when 53; "Lock Equip Type"          # Lock Equip
-    when 54; "Seal Equip Type"          # Seal Equip
-    when 55; "Change Equip Type"        # Slot Type - Dual Wield
-    when 61; "Additional Actions"       # Action Times+
-    when 62; "Special"                  # Special Flag
-    when 63; "Collapse Effect"          # Collapse Effect
-    when 64; "Party Ability"            # Party Ability
+    when 11; self.element_rate_title                   # Element Rate
+    when 12; self.debuff_rate_title                    # Debuff Rate
+    when 13; self.state_rate_title                     # State Rate
+    when 14; "Nullify " + self.state_label             # State Resist   
+    when 31; "Atk " + self.element_label               # Atk Element
+    when 32; "Atk " + self.state_label                 # Atk State
+    when 33; "Atk Speed"                               # Atk Speed
+    when 34; "Additional Attacks"                      # Atk Times+
+    when 41; "Add " + self.skill_label + " Type"       # Add Skill Type
+    when 42; "Seal " + self.skill_label + " Type"      # Disable Skill Type
+    when 43; "Learn " + self.skill_label               # Add Skill
+    when 44; "Seal " + self.skill_label                # Disable Skill
+    when 51; "Equip " + self.weapon_label + " Type"    # Equip Weapon
+    when 52; "Equip " + self.armor_label + " Type"     # Equip Armor 
+    when 53; "Lock Equip Type"                         # Lock Equip
+    when 54; "Seal Equip Type"                         # Seal Equip
+    when 55; "Change Equip Type"                       # Slot Type - Dual Wield
+    when 61; "Additional Actions"                      # Action Times+
+    when 62; "Special"                                 # Special Flag
+    when 63; "Collapse Effect"                         # Collapse Effect
+    when 64; "Party Ability"                           # Party Ability
     else; return ""; end
   end
   # Feature - Change Equip Type
@@ -151,7 +151,6 @@ module Vocab
   # These apply to items found in the Items and Skills Tabs of the database.
   #----------------------------------------------------------------------------
   def self.usable_dmg_variance_label; "Variance"; end
-  def self.usable_dmg_element_label; "Element"; end
   def self.usable_speed_label;       "Speed"; end
   def self.usable_success_label;     "Success %"; end
   def self.usable_repeats_label;     "# of Hits"; end
@@ -222,19 +221,19 @@ module Vocab
   # Effects Labels
   def self.effects(effects_code)
     case effects_code
-    when 11; self.hp_a + " Change"      # HP Recovery
-    when 12; self.mp_a + " Change"      # MP Recovery
-    when 13; self.tp_a + " Change"      # TP Gain
-    when 21; "Add State"                # Add State
-    when 22; "Remove State"             # Remove State
-    when 31; "Add Buff"                 # Add Buff
-    when 32; "Add Debuff"               # Add Debuff
-    when 33; "Remove Buff"              # Remove Buff
-    when 34; "Remove Debuff"            # Remove Debuff
-    when 41; "Special"                  # Special Effect
-    when 42; "Raise Parameter"          # Raise Parameter
-    when 43; "Learn Skill"              # Learn Skill
-    when 44; "Special"                  # Common Events
+    when 11; self.hp_a + " Change"         # HP Recovery
+    when 12; self.mp_a + " Change"         # MP Recovery
+    when 13; self.tp_a + " Change"         # TP Gain
+    when 21; "Add " + self.state_label     # Add State
+    when 22; "Remove " + self.state_label  # Remove State
+    when 31; "Add " + self.buff_label      # Add Buff
+    when 32; "Add " + self.debuff_label    # Add Debuff
+    when 33; "Remove " + self.buff_label   # Remove Buff
+    when 34; "Remove " + self.debuff_label # Remove Debuff
+    when 41; "Special"                     # Special Effect
+    when 42; "Raise Parameter"             # Raise Parameter
+    when 43; "Learn " + self.skill_label   # Learn Skill
+    when 44; "Special"                     # Common Events
     else; return ""; end
   end
   # Effect - Add Buff and Add Debuff
@@ -248,7 +247,7 @@ module Vocab
   def self.item_type(value)
     case value
       when 1;  text1 = "Normal"
-      when 2;  text1 = "Key Item"
+      when 2;  text1 = "Key " + self.item_label
     end
   end
   # Item Consume
@@ -266,7 +265,7 @@ module Vocab
   def self.stype_id_label;  "Type"; end
   def self.tp_cost_label;   self.tp_a + " Cost"; end
   def self.mp_cost_label;   self.mp_a + " Cost"; end
-  def self.req_wtype_label; "Req. Weapon Type"; end
+  def self.req_wtype_label; "Req. " + self.weapon_label + " Type"; end
 end #module Vocab
 #==============================================================================
 # ** Config
@@ -1563,7 +1562,7 @@ class Window_Info < Window_Base
   def draw_usable_dmg_element(x, y, width)  
     return if @@ln == info_ln_max
     change_color(system_color)
-    text = Vocab::usable_dmg_element_label
+    text = Vocab::element_label
     draw_text(x, y + @@fs * @@ln, width, line_height, text)
     change_color(normal_color)
     text1 = Vocab::elements(@@ref[@item.id].damage.element_id)
