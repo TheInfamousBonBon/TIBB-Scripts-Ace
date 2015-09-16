@@ -1,0 +1,297 @@
+#==============================================================================
+# ▼ TIBB Status Screen ver. 1.02
+# - Engine: RPG Maker Ace
+# - Created: 2015.08.29
+# - Requires: TIBB's Menu Base ver. 1.02 or higher
+# - Terms of Use:  Free to use commercially or non-commercially with credit
+#      to The Infamous Bon Bon.
+# - Find Me @: https://ccrgeek.wordpress.com/ or http://forums.rpgmakerweb.com/
+#==============================================================================
+
+$imported = {} if $imported.nil?
+$imported["TIBB-StatusScreen"] = true
+
+#==============================================================================
+# ▼ Updates
+# -----------------------------------------------------------------------------
+# 2015.09.02 - Added Config Module for setting Class Label text, to reduce the 
+#               need to go through scripts.  Added $imported method.
+# 2015.09.15 - Added changes necessary because of Menu Base update.
+#==============================================================================
+#==============================================================================
+# ▼ Introduction
+# -----------------------------------------------------------------------------
+# Includes X-Parameters, S-Parameters, Element Rates, and State Rates by 
+#  utilizing multiple pages.  Change pages with the Shift key.
+#==============================================================================
+#==============================================================================
+# ▼ Instructions
+# -----------------------------------------------------------------------------
+# None
+#==============================================================================
+#==============================================================================
+# ▼ Compatibility
+# -----------------------------------------------------------------------------
+# Overwritten methods:
+#   class Window_Status - Refresh
+#   class Window_Status - Draw Experience Information
+#   class Window_Status - Draw Equipment
+# Aliased methods:
+#   class Window_Status - Object Initialization
+#   class Window_Status - Frame Update
+#==============================================================================
+
+#==============================================================================
+# ▼ Window_Status
+#------------------------------------------------------------------------------
+#  This window displays full status specs on the status screen.
+#==============================================================================
+class Window_Status < Window_Selectable
+  #--------------------------------------------------------------------------
+  # --Alias Method--
+  # * Object Initialization
+  #--------------------------------------------------------------------------
+  alias tibb_initialize_window_status initialize
+  def initialize(actor)
+    @page_index = 0
+    tibb_initialize_window_status(actor)
+  end
+  #--------------------------------------------------------------------------
+  # --Alias Method--
+  # * Frame Update
+  #--------------------------------------------------------------------------
+  alias tibb_update_window_status update
+  def update
+    tibb_update_window_status
+    update_page
+  end
+  #--------------------------------------------------------------------------
+  # --New Method--
+  # * Update Page
+  #--------------------------------------------------------------------------
+  def update_page
+    if visible && Input.trigger?(:A) && page_max > 1
+      @page_index = (@page_index + 1) % page_max
+      refresh
+    end
+  end
+  #--------------------------------------------------------------------------
+  # --New Method--
+  # * Get Maximum Number of Pages
+  #--------------------------------------------------------------------------
+  def page_max; return 2; end
+  #--------------------------------------------------------------------------
+  # --New Method--
+  # * Get Horizontal Column Spacing 
+  #--------------------------------------------------------------------------
+  def horz_column_spacing; return 20; end
+  #--------------------------------------------------------------------------
+  # --New Method--
+  # * Get Three Column Width
+  #--------------------------------------------------------------------------
+  def three_col_width; return (contents.width - (horz_column_spacing * 2)) / 3
+  end
+  #--------------------------------------------------------------------------
+  # --New Method--
+  # * Get Four Column Width
+  #--------------------------------------------------------------------------
+  def four_col_width; return (contents.width - (horz_column_spacing * 3)) / 4
+  end
+  #--------------------------------------------------------------------------
+  # --Overwrite Method--
+  # * Refresh
+  #--------------------------------------------------------------------------
+  def refresh
+    contents.clear
+    draw_header(0)
+    actor = @actor
+    width = three_col_width
+    hs = horz_column_spacing
+    draw_menu_nparam_block(actor, 0, line_height * 2, width)
+    draw_class_block(width + hs, line_height * 4, width)
+    draw_equipments((width + hs) * 2, line_height * 2, width)
+    width = four_col_width
+    if @page_index == 0
+      draw_menu_xparam_block(actor, 0, line_height * 8 - 4, width, 
+                              Vocab.xparameter_title)
+      draw_menu_sparam_block(actor, (width + hs) * 2, line_height * 8 - 4, width, 
+                              Vocab.sparameter_title)
+    elsif @page_index == 1
+      draw_menu_element_block(actor, 0, line_height * 8 - 4, width, 
+                              Vocab.element_rate_title)
+      draw_menu_state_block(actor, (width + hs) * 2, line_height * 8 - 4, width, 
+                            Vocab.state_rate_title)
+    end #if @page_index == 0
+    # This all concerning the more info text--------------------------------
+    contents.font.size = 20
+    contents.font.italic = true
+    contents.font.outline = false
+    contents.font.shadow = true
+    change_color(text_color(3), true)
+    rect = Rect.new(0, line_height * 12 + 12, contents.width, line_height)
+    text = TIBB::Config::Change_Pg
+    draw_text(rect, text, 2) if page_max > 1
+    contents.font.italic = false
+    contents.font.outline = true
+    contents.font.shadow = false
+    contents.font.size = Font.default_size
+    #------------------------------------------------------------------------
+    draw_horz_line(line_height * 13)
+    draw_description(0, line_height * 14)
+  end
+  #--------------------------------------------------------------------------
+  # --New Method--
+  # * Draw Header
+  #--------------------------------------------------------------------------
+  def draw_header(y)
+    contents.font.italic = true
+    contents.font.size = Font.default_size * 1.5
+    th = contents.font.size
+    tw = contents.width / 2 - 48
+    draw_text(0, y + 2, tw, th, @actor.name, 1)
+    draw_text(tw + 96, y + 2, tw, th, @actor.nickname, 1)
+    draw_actor_face(@actor, tw, y + 2)
+    contents.font.size = Font.default_size
+    contents.font.italic = false
+    draw_horz_line_alt(0, y, tw, th)
+    draw_horz_line_alt(tw + 96, y, tw, th)
+    draw_horz_line_alt(tw, y, 98, 0)
+    draw_horz_line_alt(tw - 2, y + 96, 98, 0)
+    draw_vert_line_alt(tw - 2, y, 98)
+    draw_vert_line_alt(tw + 96, y, 98)
+  end
+  #--------------------------------------------------------------------------
+  # --New Method--
+  # * Draw Menu Normal Parameter Block
+  #--------------------------------------------------------------------------
+  def draw_menu_nparam_block(actor, x, y, width)
+    hs = horz_column_spacing
+    contents.font.size = Font.default_size - 4
+    draw_level(actor, x, y, (width - hs) / 2)
+    draw_menu_nparam(actor, x + width / 2 + hs / 2, y, (width - hs) / 2, 0)
+    draw_menu_nparam(actor, x, y + line_height * 1, (width - hs) / 2, 1)
+    draw_menu_nparam(actor, x + width / 2 + hs / 2, y + line_height * 1,
+                      (width - hs) / 2, 8)
+    draw_menu_nparam(actor, x, y + line_height * 2, width / 2 - hs / 2, 2)
+    draw_menu_nparam(actor, x, y + line_height * 3, width / 2 - hs / 2, 3)
+    draw_menu_nparam(actor, x, y + line_height * 4, width / 2 - hs / 2, 4)
+    
+    column2 = width / 2 + hs / 2
+    draw_menu_nparam(actor, column2, y + line_height * 2, width / 2 - hs / 2, 5)
+    draw_menu_nparam(actor, column2, y + line_height * 3, width / 2 - hs / 2, 6)
+    draw_menu_nparam(actor, column2, y + line_height * 4, width / 2 - hs / 2, 7)
+    contents.font.size = Font.default_size
+  end
+  #--------------------------------------------------------------------------
+  # --New Method--
+  # * Draw Actor Level
+  #--------------------------------------------------------------------------
+  def draw_level(actor, x, y, width)
+    change_color(system_color)
+    draw_text(x, y, width, line_height, Vocab.level_a)
+    change_color(normal_color)
+    draw_text(x, y, width, line_height, actor.level, 2)
+  end
+  #--------------------------------------------------------------------------
+  # --New Method--
+  # * Draw Menu X-Parameter Block
+  #--------------------------------------------------------------------------
+  def draw_menu_xparam_block(actor, x, y, width, block_title)
+    hs = horz_column_spacing
+    draw_block_title(x, y - (line_height - 4), block_title, width * 2 + hs)
+    contents.font.size = Font.default_size - 4    
+    5.times {|i| draw_menu_xparam(actor, x, y + (line_height - 4) * i,
+              width, i) }
+    5.times {|i| draw_menu_xparam(actor, x + (width + hs), 
+              y + (line_height - 4) * i, width, i + 5) }
+    contents.font.size = Font.default_size
+  end
+  #--------------------------------------------------------------------------
+  # --New Method--
+  # * Draw Menu Sp-Parameter Block
+  #--------------------------------------------------------------------------
+  def draw_menu_sparam_block(actor, x, y, width, block_title)
+    hs = horz_column_spacing
+    draw_block_title(x, y - (line_height - 4), block_title, width * 2 + hs)
+    contents.font.size = Font.default_size - 4
+    5.times {|i| draw_menu_sparam(actor, x, y + (line_height - 4) * i, 
+              width, i) }
+    5.times {|i| draw_menu_sparam(actor, x + (width + hs), 
+              y + (line_height - 4) * i, width, i + 5) }
+    contents.font.size = Font.default_size
+  end
+  #--------------------------------------------------------------------------
+  # --New Method--
+  # * Draw Menu Element Block
+  #--------------------------------------------------------------------------
+  def draw_menu_element_block(actor, x, y, width, block_title)
+    hs = horz_column_spacing
+    draw_block_title(x, y - (line_height - 4), block_title, width * 2 + hs)
+    contents.font.size = Font.default_size - 4
+    4.times {|i| draw_menu_element(actor, x, y + (line_height - 4) * i, width,
+              3 + i) }
+    4.times {|i| draw_menu_element(actor, x + (width + hs), 
+              y + (line_height - 4) * i, width, 7 + i) }
+    contents.font.size = Font.default_size
+  end    
+  #--------------------------------------------------------------------------
+  # --New Method--
+  # * Draw Menu State Block
+  #--------------------------------------------------------------------------
+  def draw_menu_state_block(actor, x, y, width, block_title)
+    hs = horz_column_spacing
+    draw_block_title(x, y - (line_height - 4), block_title, width * 2 + hs)
+    contents.font.size = Font.default_size - 4
+    4.times {|i| draw_menu_state(actor, x, y + (line_height - 4) * i, width,
+              2 + i) }
+    3.times {|i| draw_menu_state(actor, x + (width + hs), 
+              y + (line_height - 4) * i, width, 6 + i) }
+    contents.font.size = Font.default_size
+  end
+  #--------------------------------------------------------------------------
+  # --New Method--
+  # * Draw Class Block
+  #--------------------------------------------------------------------------
+  def draw_class_block(x, y, width)
+    contents.font.size = Font.default_size - 4
+    draw_class(x, y, width)
+    draw_exp_info(x, y + line_height * 1, width)
+    contents.font.size = Font.default_size
+  end
+  #--------------------------------------------------------------------------
+  # --New Method--
+  # * Draw Class
+  #--------------------------------------------------------------------------
+  def draw_class(x, y, width)
+    change_color(system_color)
+    draw_text(x, y, width, line_height, Vocab.class_label)
+    change_color(normal_color)
+    draw_text(x, y, width, line_height, @actor.class.name, 2)
+  end
+  #--------------------------------------------------------------------------
+  # --Overwrite Method--
+  # * Draw Experience Information
+  #--------------------------------------------------------------------------
+  def draw_exp_info(x, y, width)
+    s1 = @actor.max_level? ? "-------" : @actor.exp
+    s2 = @actor.max_level? ? "-------" : @actor.next_level_exp - @actor.exp
+    s_next = sprintf(Vocab::ExpNext, Vocab::level)
+    change_color(system_color)
+    draw_text(x, y, width, line_height, Vocab::ExpTotal)
+    draw_text(x, y + line_height * 1, width, line_height, s_next)
+    change_color(normal_color)
+    draw_text(x, y, width, line_height, s1, 2)
+    draw_text(x, y + line_height * 1, width, line_height, s2, 2)
+  end
+  #--------------------------------------------------------------------------
+  # --Overwrite Method--
+  # * Draw Equipment
+  #--------------------------------------------------------------------------
+  def draw_equipments(x, y, width)
+    contents.font.size = Font.default_size - 4
+    @actor.equips.each_with_index do |item, i|
+      draw_item_name(item, x, y + line_height * i, true, width)
+    end
+    contents.font.size = Font.default_size
+  end
+end #class Window_Status < Window_Selectable
