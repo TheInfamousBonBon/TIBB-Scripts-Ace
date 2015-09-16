@@ -1,0 +1,615 @@
+#==============================================================================
+# ▼ TIBB Equip Screen ver. 1.02
+# - Engine: RPG Maker Ace
+# - Created: 2015.08.29
+# - Requires: TIBB's Menu Base ver. 1.02 or higher
+# - Terms of Use:  Free to use commercially or non-commercially with credit
+#      to The Infamous Bon Bon.
+# - Find Me @: https://ccrgeek.wordpress.com/ or http://forums.rpgmakerweb.com/
+#==============================================================================
+
+$imported = {} if $imported.nil?
+$imported["TIBB-EquipScreen"] = true
+
+#==============================================================================
+# ▼ Updates
+# -----------------------------------------------------------------------------
+# 2015.09.02 - Added Config Module for setting text used in Window_EquipSlot, 
+#              to reduce the need to go through scripts. Added $imported method.
+# 2015.09.15 - Added changes necessary because of Menu Base update.
+#==============================================================================
+#==============================================================================
+# ▼ Introduction
+# -----------------------------------------------------------------------------
+# The entire screen has been changed with the EquipCommand now vertical instead
+# of horizontal, the EquipSlot window modified so slot names only appear when
+# nothing is equipped and an enhanced EquipStatus window.
+# EquipStatus window displays actor's Parameters, Level, and Character Sprite.
+# Includes X-Parameters, S-Parameters, Element Rates, and State Rates by 
+#  utilizing multiple pages.  Change pages with the Shift key.
+#==============================================================================
+#==============================================================================
+# ▼ Instructions
+# -----------------------------------------------------------------------------
+# Edit the settings in the module below as you see fit.
+#==============================================================================
+#==============================================================================
+# ▼ Compatibility
+# -----------------------------------------------------------------------------
+# Overwritten methods:
+#   class Window_EquipStatus - Get Window Width
+#   class Window_EquipStatus - Refresh
+#   class Window_EquipStatus - Draw Level
+#   class Window_EquipSlot - Get Number of Lines to Show
+#   class Window_EquipSlot - Draw Item
+#   class Scene_Equip - Create Status Window
+#   class Scene_Equip - Create Command Window
+#   class Scene_Equip - Create Slot Window
+#   
+# Aliased methods:
+#   class Window_EquipStatus - Object Initialization
+#   class Window_EquipStatus - Frame Update
+#   
+#
+#==============================================================================
+
+#==============================================================================
+# ** Config
+#------------------------------------------------------------------------------
+# Here you can change the text used in Window_EquipSlot.
+#==============================================================================
+module TIBB
+  module Config
+    # Set text for the slot when the slot is sealed
+    Unable = "Unable to Equip"
+    # Set Prefix for the Slot type name when nothing is equipped
+    Slot_Prefix = "Equip "
+    # Set Equip Status window width
+    EquipStatusWidth = 378
+  end
+end
+#==============================================================================
+# ** Window_EquipStatus
+#------------------------------------------------------------------------------
+#  This window displays actor parameter changes on the equipment screen.
+#==============================================================================
+class Window_EquipStatus < Window_Base
+  #--------------------------------------------------------------------------
+  # --Alias Method--
+  # * Object Initialization
+  #--------------------------------------------------------------------------
+  alias tibb_initialize_window_equipstatus initialize
+  def initialize(x, y)
+    tibb_initialize_window_equipstatus(x, y)
+    @page_index = 0
+  end
+  #--------------------------------------------------------------------------
+  # --Alias Method--
+  # * Frame Update
+  #--------------------------------------------------------------------------
+  alias tibb_update_window_equipstatus update
+  def update
+    tibb_update_window_equipstatus
+    update_page
+  end
+  #--------------------------------------------------------------------------
+  # --New Method--
+  # * Update Page
+  #--------------------------------------------------------------------------
+  def update_page
+    if visible && Input.trigger?(:A) && page_max > 1
+      @page_index = (@page_index + 1) % page_max
+      refresh
+    end
+  end
+  #--------------------------------------------------------------------------
+  # --New Method--
+  # * Get Maximum Number of Pages
+  #--------------------------------------------------------------------------
+  def page_max; return 4; end
+  #--------------------------------------------------------------------------
+  # --Overwrite Method--
+  # * Get Window Width
+  #--------------------------------------------------------------------------
+  def window_width; return TIBB::Config::EquipStatusWidth; end
+  #--------------------------------------------------------------------------
+  # --Overwrite Method--
+  # * Get Number of Lines to Show
+  #--------------------------------------------------------------------------
+  def visible_line_number; return 10; end
+  #--------------------------------------------------------------------------
+  # --New Method--
+  # * Get Line Spacing Modifier
+  #--------------------------------------------------------------------------
+  def line_spacing_mod; return 6; end
+  #--------------------------------------------------------------------------
+  # --New Method--
+  # * Get Arrow xSpacing 
+  #--------------------------------------------------------------------------
+  def arrow_xspacing; return 108; end
+  #--------------------------------------------------------------------------
+  # --New Method--
+  # * Get Current xSpacing 
+  #--------------------------------------------------------------------------
+  def current_xspacing; return 71; end
+  #--------------------------------------------------------------------------
+  # --New Method--
+  # * Get Change xSpacing 
+  #--------------------------------------------------------------------------
+  def change_xspacing; return 125; end
+  #--------------------------------------------------------------------------
+  # --New Method--
+  # * Get Arrow xSpacing
+  #--------------------------------------------------------------------------
+  def column2; return 170; end
+  #--------------------------------------------------------------------------
+  # --Overwrite Method--
+  # * Refresh
+  #--------------------------------------------------------------------------
+  def refresh
+    contents.clear
+    actor = @actor
+    draw_actor_name(@actor, 40, 0) if @actor
+    contents.font.size = Font.default_size - 5
+    draw_actor_level(@actor, 40, 20, 40)
+    draw_actor_graphic_alt(20, 36)
+    draw_nparam_block(actor, 0, 0)
+    #------------------------------------------------------------------------
+    # This section applies only to the first page.
+    if @page_index == 0
+      draw_xparam_block(actor, 0, line_height * 5 + 6, Vocab.xparameter_title)
+    #------------------------------------------------------------------------
+    # This section applies only to the first page.
+    elsif @page_index == 1
+      draw_sparam_block(actor, 0, line_height * 5 + 6, Vocab.sparameter_title)
+    #------------------------------------------------------------------------
+    # This section applies only to the third page.
+    elsif @page_index == 2
+      draw_element_block(actor, 0, line_height * 5 + 6,Vocab.element_rate_title)
+    #------------------------------------------------------------------------
+    # This section applies only to the fourth page.
+    elsif @page_index == 3
+      draw_state_block(actor, 0, line_height * 5 + 6, Vocab.state_rate_title)
+    end #if @page_index == 0
+    #------------------------------------------------------------------------
+    draw_page_change_text
+    contents.font.size = Font.default_size
+  end
+
+  #--------------------------------------------------------------------------
+  # --Overwrite Method--
+  # * Draw Level
+  #--------------------------------------------------------------------------
+  def draw_actor_level(actor, x, y, width)
+    change_color(system_color)
+    draw_text(x, y, width, line_height, Vocab::level_a)
+    change_color(normal_color)
+    draw_text(x, y, width, line_height, actor.level, 2) if @actor
+  end
+  #--------------------------------------------------------------------------
+  # --New Method--
+  # * Draw Actor Graphic Alternative
+  #--------------------------------------------------------------------------
+  def draw_actor_graphic_alt(x, y)
+    draw_actor_graphic(@actor, x, y) if @actor 
+    #draw_right_arrow(x + arrow_xspacing - 20, y - line_height) if @temp_actor
+    #draw_actor_graphic(@temp_actor, x + change_xspacing - 4, y) if @temp_actor
+  end
+  #--------------------------------------------------------------------------
+  # --New Method--
+  # * Draw Parameter Block
+  #--------------------------------------------------------------------------
+  def draw_nparam_block(actor, x, y)
+    change_color(normal_color)
+    draw_nparam(actor, x, y + (line_height - line_spacing_mod) * 3, 0)
+    draw_nparam(actor, x, y + (line_height - line_spacing_mod) * 4, 1)
+    draw_nparam(actor, x, y + (line_height - line_spacing_mod) * 5, 8)
+    6.times {|i| draw_nparam(actor, column2, 
+                              y + (line_height - line_spacing_mod) * i, 2 + i)}
+  end
+  #--------------------------------------------------------------------------
+  # --New Method--
+  # * Draw X Parameter Block
+  #--------------------------------------------------------------------------            
+  def draw_xparam_block(actor, x, y, block_title)
+    change_color(normal_color)
+    draw_block_title(x, y - (line_height - line_spacing_mod), block_title, 
+                      contents.width - 20)
+    5.times {|i| draw_xparam(actor, x, 
+                              y + (line_height - line_spacing_mod) * i, i)}
+    5.times {|i| draw_xparam(actor, column2, 
+                              y + (line_height - line_spacing_mod) * i, i + 5)}
+    end
+  #--------------------------------------------------------------------------
+  # --New Method--
+  # * Draw S Parameter Block
+  #--------------------------------------------------------------------------            
+  def draw_sparam_block(actor, x, y, block_title)
+    change_color(normal_color)
+    draw_block_title(x, y - (line_height - line_spacing_mod), block_title,
+                      contents.width - 20)
+    5.times {|i| draw_sparam(actor, x, 
+                              y + (line_height - line_spacing_mod) * i, i)}
+    5.times {|i| draw_sparam(actor, column2, 
+                              y + (line_height - line_spacing_mod) * i, i + 5)}
+  end 
+  #--------------------------------------------------------------------------
+  # --New Method--
+  # * Draw Element Block
+  #--------------------------------------------------------------------------
+  def draw_element_block(actor, x, y, block_title)
+    change_color(normal_color)
+    draw_block_title(x, y - (line_height - line_spacing_mod), block_title, 
+                      contents.width - 20)
+    4.times {|i| draw_element(actor, x, y + (line_height - line_spacing_mod) * i,
+              i + 3)}
+    4.times {|i| draw_element(actor, column2, 
+              y + (line_height - line_spacing_mod) * i, i + 7)}
+  end
+  #--------------------------------------------------------------------------
+  # --New Method--
+  # * Draw State Block
+  #--------------------------------------------------------------------------
+  def draw_state_block(actor, x, y, block_title)
+    change_color(normal_color)
+    draw_block_title(x, y - (line_height - line_spacing_mod), block_title,
+                      contents.width - 20)
+    4.times {|i| draw_state(actor, x, y + (line_height - line_spacing_mod) * i,
+              i + 2)}
+    3.times {|i| draw_state(actor, column2, 
+              y + (line_height - line_spacing_mod) * i, i + 6)}
+  end
+  #--------------------------------------------------------------------------
+  # --New Method--
+  # * Draw Normal Parameters
+  #--------------------------------------------------------------------------
+  def draw_nparam(actor, x, y, param_id)
+    draw_nparam_name(x + 4, y, param_id)
+    draw_current_nparam(actor, x + current_xspacing, y, param_id) if @actor
+    draw_right_arrow(x + arrow_xspacing, y) if @temp_actor
+    draw_new_nparam(x + change_xspacing, y, param_id) if @temp_actor
+  end
+  #--------------------------------------------------------------------------
+  # --New Method--
+  # * Draw X-param
+  #--------------------------------------------------------------------------
+  def draw_xparam(actor, x, y, param_id)
+    draw_xparam_name(x + 4, y, param_id)
+    draw_current_xparam(actor, x + current_xspacing, y, param_id) if @actor
+    draw_right_arrow(x + arrow_xspacing, y) if @temp_actor
+    draw_new_xparam(x + change_xspacing, y, param_id) if @temp_actor
+  end
+  #--------------------------------------------------------------------------
+  # --New Method--
+  # * Draw S-param
+  #--------------------------------------------------------------------------
+  def draw_sparam(actor, x, y, param_id)
+    draw_sparam_name(x + 4, y, param_id)
+    draw_current_sparam(actor, x + current_xspacing, y, param_id) if @actor
+    draw_right_arrow(x + arrow_xspacing, y) if @temp_actor
+    draw_new_sparam(x + change_xspacing, y, param_id) if @temp_actor
+  end
+  #--------------------------------------------------------------------------
+  # --New Method--
+  # * Draw Element
+  #--------------------------------------------------------------------------
+  def draw_element(actor, x, y, param_id)
+    draw_element_name(x + 4, y, param_id)
+    draw_current_element_rate(actor, x + current_xspacing, y, param_id) if @actor
+    draw_right_arrow(x + arrow_xspacing, y) if @temp_actor
+    draw_new_element_rate(x + change_xspacing, y, param_id) if @temp_actor
+  end
+  #--------------------------------------------------------------------------
+  # --New Method--
+  # * Draw State
+  #--------------------------------------------------------------------------
+  def draw_state(actor, x, y, param_id)
+    draw_state_name(x + 4, y, param_id)
+    draw_current_state_rate(actor, x + current_xspacing, y, param_id) if @actor
+    draw_right_arrow(x + arrow_xspacing, y) if @temp_actor
+    draw_new_state_rate(x + change_xspacing, y, param_id) if @temp_actor
+  end
+  #--------------------------------------------------------------------------
+  # --New Method--
+  # * Draw Post-Equipment Change N-Parameter
+  #--------------------------------------------------------------------------
+  def draw_new_nparam(x, y, param_id, width = 40)
+    case param_id
+      when 0; value = @actor.mhp          # MHP  Maximum Hit Points
+      when 1; value = @actor.mmp          # MMP  Maximum Magic Points
+      when 2; value = @actor.atk          # ATK  ATtacK power
+      when 3; value = @actor.def          # DEF  DEFense power
+      when 4; value = @actor.mat          # MAT  Magic ATtack power
+      when 5; value = @actor.mdf          # MDF  Magic DeFense power
+      when 6; value = @actor.agi          # AGI  AGIlity
+      when 7; value = @actor.luk          # LUK  LUcK
+      when 8; value = @actor.max_tp       # MAX_TP  Maximum Tech Points
+    else; value = 0; end
+    case param_id
+      when 0; temp_value = @temp_actor.mhp          # MHP  Maximum Hit Points
+      when 1; temp_value = @temp_actor.mmp          # MMP  Maximum Magic Points
+      when 2; temp_value = @temp_actor.atk          # ATK  ATtacK power
+      when 3; temp_value = @temp_actor.def          # DEF  DEFense power
+      when 4; temp_value = @temp_actor.mat          # MAT  Magic ATtack power
+      when 5; temp_value = @temp_actor.mdf          # MDF  Magic DeFense power
+      when 6; temp_value = @temp_actor.agi          # AGI  AGIlity
+      when 7; temp_value = @temp_actor.luk          # LUK  LUcK
+      when 8; temp_value = @temp_actor.max_tp       # MAX_TP  Maximum Tech Points
+    else; temp_value = 0; end
+    change_color(param_change_color(temp_value - value))
+    draw_text(x, y, width, line_height, temp_value, 2)
+  end
+  #--------------------------------------------------------------------------
+  # --New Method--
+  # * Draw Post-Equipment Change X-Parameter
+  #--------------------------------------------------------------------------
+  def draw_new_xparam(x, y, param_id, width = 40)
+    case param_id
+      when 0; value = @actor.hit         # HIT Hit Rate
+      when 1; value = @actor.eva         # EVA Evasion Rate
+      when 2; value = @actor.cri         # CRI Critical Hit Rate
+      when 3; value = @actor.cev         # CEV Critical Evasion Rate
+      when 4; value = @actor.mev         # MEV Magic Evasion Rate
+      when 5; value = @actor.mrf         # MRF Magic Relfection Rate
+      when 6; value = @actor.cnt         # CNT Counter Attack Rate
+      when 7; value = @actor.hrg         # HRG Hp Regeneration Rate
+      when 8; value = @actor.mrg         # MRG Mp Regeneration Rate
+      when 9; value = @actor.trg         # TRG Tp Regeneration Rate
+    else; value = 0; end
+    case param_id
+      when 0; temp_value = @temp_actor.hit         # HIT Hit Rate
+      when 1; temp_value = @temp_actor.eva         # EVA Evasion Rate
+      when 2; temp_value = @temp_actor.cri         # CRI Critical Hit Rate
+      when 3; temp_value = @temp_actor.cev         # CEV Critical Evasion Rate
+      when 4; temp_value = @temp_actor.mev         # MEV Magic Evasion Rate
+      when 5; temp_value = @temp_actor.mrf         # MRF Magic Relfection Rate
+      when 6; temp_value = @temp_actor.cnt         # CNT Counter Attack Rate
+      when 7; temp_value = @temp_actor.hrg         # HRG Hp Regeneration Rate
+      when 8; temp_value = @temp_actor.mrg         # MRG Mp Regeneration Rate
+      when 9; temp_value = @temp_actor.trg         # TRG Tp Regeneration Rate
+    else; temp_value = 0; end
+    new_value = (temp_value * 100).to_i
+    current_value = (value * 100).to_i
+    change_color(param_change_color(new_value - current_value))
+    text = new_value.to_s + "%"
+    draw_text(x, y, width, line_height, text, 2)
+  end
+  #--------------------------------------------------------------------------
+  # --New Method--
+  # * Draw Post-Equipment Change S-Parameter
+  #--------------------------------------------------------------------------
+  def draw_new_sparam(x, y, param_id, width = 40, bonus = TIBB::Config::S_Bonus, 
+                              flipped = TIBB::Config::S_Flip)
+    case param_id  
+      when 0; value = @actor.tgr  # TGR  TarGet Rate
+      when 1; value = @actor.grd  # GRD  GuaRD effect rate
+      when 2; value = @actor.rec  # REC  RECovery effect rate
+      when 3; value = @actor.pha         # PHA  PHArmacology
+      when 4; value = @actor.mcr         # MCR  Mp Cost Rate
+      when 5; value = @actor.tcr      # TCR  Tp Charge Rate
+      when 6; value = @actor.pdr      # PDR  Physical Damage Rate
+      when 7; value = @actor.mdr      # MDR  Magical Damage Rate
+      when 8; value = @actor.fdr     # FDR  Floor Damage Rate
+      when 9; value = @actor.exr       # EXR  EXperience Rate
+    else; value = 0; end
+    case param_id  
+      when 0; temp_value = @temp_actor.tgr  # TGR  TarGet Rate
+      when 1; temp_value = @temp_actor.grd  # GRD  GuaRD effect rate
+      when 2; temp_value = @temp_actor.rec  # REC  RECovery effect rate
+      when 3; temp_value = @temp_actor.pha         # PHA  PHArmacology
+      when 4; temp_value = @temp_actor.mcr         # MCR  Mp Cost Rate
+      when 5; temp_value = @temp_actor.tcr      # TCR  Tp Charge Rate
+      when 6; temp_value = @temp_actor.pdr      # PDR  Physical Damage Rate
+      when 7; temp_value = @temp_actor.mdr      # MDR  Magical Damage Rate
+      when 8; temp_value = @temp_actor.fdr     # FDR  Floor Damage Rate
+      when 9; temp_value = @temp_actor.exr       # EXR  EXperience Rate
+    else; temp_value = 0; end
+    text_value = (temp_value * 100).to_i
+    current_value = (value * 100).to_i
+    change_color(param_change_color(text_value - current_value))
+    if bonus
+      text_value -= 100
+      text_value *= -1 if flipped
+      if text_value > 0
+        sign = "+"
+        text = sign + text_value.to_s + "%"
+      elsif text_value == 0
+        text = "-- %"
+      else
+        text = text_value.to_s + "%"
+      end
+    else
+      text = text_value.to_s + "%"
+    end
+    draw_text(x, y, width, line_height, text, 2)
+  end
+  #--------------------------------------------------------------------------
+  # --New Method--
+  # * Draw Post-Equipment Change Element Rate
+  #--------------------------------------------------------------------------
+  def draw_new_element_rate(x, y, param_id, width = 40, 
+                            bonus = TIBB::Config::E_Bonus, 
+                            flipped = TIBB::Config::E_Flip)
+    text_value = (@temp_actor.element_rate(param_id) * 100).to_i
+    current_value = (@actor.element_rate(param_id) * 100).to_i
+    change_color(param_change_color(current_value - text_value))
+    if bonus
+      text_value -= 100
+      text_value *= -1 if flipped
+      if text_value > 0
+        sign = "+"
+        text = sign + text_value.to_s + "%"
+      elsif text_value == 0
+        text = "-- %"
+      else
+        text = text_value.to_s + "%"
+      end
+    else
+      text = text_value.to_s + "%"
+    end
+      draw_text(x, y, width, line_height, text, 2)
+  end
+  #--------------------------------------------------------------------------
+  # --New Method--
+  # * Draw Post-Equipment Change State Rate
+  #--------------------------------------------------------------------------
+  def draw_new_state_rate(x, y, param_id, width = 40,
+                          bonus = TIBB::Config::St_Bonus, 
+                          flipped = TIBB::Config::St_Flip)
+    text_value = (@temp_actor.state_rate(param_id) * 100).to_i
+    current_value = (@actor.state_rate(param_id) * 100).to_i
+    text_value = 0 if @temp_actor.state_resist?(param_id)
+    if @temp_actor.state_resist?(param_id)
+      unless @actor.state_resist?(param_id)
+        change_color(param_change_color(current_value - text_value))
+      else
+        change_color(normal_color)
+      end
+    else
+      change_color(param_change_color(current_value - text_value))
+    end
+    #-------------------------------------------
+    if bonus
+      text_value -= 100
+      text_value *= -1 if flipped
+      if text_value > 0
+        sign = "+"
+        text = sign + text_value.to_s + "%"
+      elsif text_value == 0
+        text = "-- %"
+      else
+        text = text_value.to_s + "%"
+      end
+    else
+      text = text_value.to_s + "%"
+    end
+      draw_text(x, y, width, line_height, text, 2)
+  end
+end #class Window_EquipStatus < Window_Base
+#==============================================================================
+# ** Window_EquipSlot
+#------------------------------------------------------------------------------
+#  This window displays items the actor is currently equipped with on the
+# equipment screen.
+#==============================================================================
+class Window_EquipSlot < Window_Selectable
+  #--------------------------------------------------------------------------
+  # --Overwrite Method--
+  # * Get Number of Lines to Show
+  #--------------------------------------------------------------------------
+  def visible_line_number
+    return 6
+  end
+  #--------------------------------------------------------------------------
+  # --Overwrite Method--
+  # * Draw Item
+  #--------------------------------------------------------------------------
+  def draw_item(index)
+    return unless @actor
+    rect = item_rect_for_text(index)
+    change_color(system_color, enable?(index))
+    if @actor.equips[index].nil?
+      contents.font.italic = true
+      if @actor.equip_type_sealed?(index); name = TIBB::Config::Unable
+      else; name = TIBB::Config::Slot_Prefix + slot_name(index); end
+      draw_text(rect.x, rect.y, rect.width, line_height, name, 1)
+      contents.font.italic = false
+    end
+    draw_item_name(@actor.equips[index], rect.x, rect.y, enable?(index), 
+                    rect.width - 24)
+  end
+end #class Window_EquipSlot < Window_Selectable
+#==============================================================================
+# ** Window_EquipCommand_Vert
+#------------------------------------------------------------------------------
+#  This window is for selecting commands (change equipment/ultimate equipment
+# etc.) on the equip screen, but vertical.
+#==============================================================================
+class Window_EquipCommand_Vert < Window_Command
+  #--------------------------------------------------------------------------
+  # * Object Initialization
+  #--------------------------------------------------------------------------
+  def initialize(x, y, width)
+    @window_width = width
+    super(x, y)
+  end
+  #--------------------------------------------------------------------------
+  # * Get Window Width
+  #--------------------------------------------------------------------------
+  def window_width
+    @window_width
+  end
+  #--------------------------------------------------------------------------
+  # * Get Number of Lines to Show
+  #--------------------------------------------------------------------------
+  def visible_line_number
+    return 3
+  end
+  #--------------------------------------------------------------------------
+  # * Get Alignment
+  #--------------------------------------------------------------------------
+  def alignment
+    return 1
+  end
+  #--------------------------------------------------------------------------
+  # * Create Command List
+  #--------------------------------------------------------------------------
+  def make_command_list
+    add_command(Vocab::equip2,   :equip)
+    add_command(Vocab::optimize, :optimize)
+    add_command(Vocab::clear,    :clear)
+  end
+end #class Window_EquipCommand_Vert < Window_Command
+#==============================================================================
+# ** Scene_Equip
+#------------------------------------------------------------------------------
+#  This class performs the equipment screen processing.
+# The changes here were necessary in order to move the windows around.
+#==============================================================================
+class Scene_Equip < Scene_MenuBase
+  #--------------------------------------------------------------------------
+  # --Overwrite Method--
+  # * Create Status Window
+  #--------------------------------------------------------------------------
+  def create_status_window
+    value = TIBB::Config::EquipStatusWidth
+    @status_window = Window_EquipStatus.new(Graphics.width - value, 
+                                              @help_window.height)
+    @status_window.viewport = @viewport
+    @status_window.actor = @actor
+  end
+  #--------------------------------------------------------------------------
+  # --Overwrite Method--
+  # * Create Command Window
+  #--------------------------------------------------------------------------
+  def create_command_window
+    wx = 0
+    wy = @help_window.height
+    ww = Graphics.width - @status_window.width
+    @command_window = Window_EquipCommand_Vert.new(wx, wy, ww)
+    @command_window.viewport = @viewport
+    @command_window.help_window = @help_window
+    @command_window.set_handler(:equip,    method(:command_equip))
+    @command_window.set_handler(:optimize, method(:command_optimize))
+    @command_window.set_handler(:clear,    method(:command_clear))
+    @command_window.set_handler(:cancel,   method(:return_scene))
+    @command_window.set_handler(:pagedown, method(:next_actor))
+    @command_window.set_handler(:pageup,   method(:prev_actor))
+  end
+  #--------------------------------------------------------------------------
+  # --Overwrite Method--
+  # * Create Slot Window
+  #--------------------------------------------------------------------------
+  def create_slot_window
+    wx = 0
+    wy = @command_window.y + @command_window.height
+    ww = Graphics.width - @status_window.width
+    @slot_window = Window_EquipSlot.new(wx, wy, ww)
+    @slot_window.viewport = @viewport
+    @slot_window.help_window = @help_window
+    @slot_window.status_window = @status_window
+    @slot_window.actor = @actor
+    @slot_window.set_handler(:ok,       method(:on_slot_ok))
+    @slot_window.set_handler(:cancel,   method(:on_slot_cancel))
+  end  
+end #class Scene_Equip < Scene_MenuBase
