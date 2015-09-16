@@ -16,7 +16,8 @@ $imported["TIBB-StatusScreen"] = true
 # -----------------------------------------------------------------------------
 # 2015.09.02 - Added Config Module for setting Class Label text, to reduce the 
 #               need to go through scripts.  Added $imported method.
-# 2015.09.15 - Added changes necessary because of Menu Base update.
+# 2015.09.15 - Added changes necessary because of Menu Base update.  Removed
+#               Class Label (now in Menu Base).
 #==============================================================================
 #==============================================================================
 # ▼ Introduction
