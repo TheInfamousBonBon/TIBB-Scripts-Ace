@@ -2,7 +2,7 @@
 # ▼ Info Window Base ver. 1.01
 # - Engine: RPG Maker Ace
 # - Created: 2015.09.12
-# - Requires: TIBB Menu Base 1.02
+# - Requires: TIBB Menu Base 1.02 or higher
 # - Terms of Use:  Free to use commercially or non-commercially with credit
 #      to The Infamous Bon Bon.
 # - Find Me @: https://ccrgeek.wordpress.com/ or http://forums.rpgmakerweb.com/
@@ -305,6 +305,7 @@ module TIBB
     #:special_note,
     #:empty_space,
     ] # Removing this would be bad
+    
     #--------------------------------------------------------------------------
     # * Usable Damage Block
     # Applies to Skills and Items.  If 'DrawDamageIfNone = false' then the
@@ -322,6 +323,7 @@ module TIBB
     :damage_critical,
     #:empty_space,
     ] # Removing this would be bad
+    
     #--------------------------------------------------------------------------
     # * Usable Damage Block
     # Applies to Skills and Items.
@@ -342,6 +344,7 @@ module TIBB
     :learn_skill,
     #:empty_space,
     ] # Removing this would be bad
+    
     #--------------------------------------------------------------------------
     # * Equipment General Block
     # Applies to Weapons and Armors.
@@ -385,6 +388,7 @@ module TIBB
     :parameter_bonuses,
     #:empty_space,
     ] # Removing this would be bad
+    
     #--------------------------------------------------------------------------
     # * Features Block
     # Applies to Weapons and Armors and if using Data Screen script, Enemies,
@@ -418,20 +422,25 @@ module TIBB
     :party_ability,
     #:empty_space,
     ] # Removing this would be bad
+    
   end #module Config
 end #module TIBB
+
 #**** See Draw Special Note below if you think you might want to use that. ****#
+
 #==============================================================================
 # ** Window_Info
 #------------------------------------------------------------------------------
 #  This window displays info from the database for Weapons, Armor, Items, 
 #   and Skills.
 #==============================================================================
-class Window_Info < Window_Base
+class Window_Info < Window_Base # Removing this would be bad
   #----------------------------------------------------------------------------
   # * Draw Special Note
   # Here you can add methods for adding notes for special items, equipment, etc.
   # Requires some scripting knowledge.  Example commented out.
+  # If you don't have anything written for an item the special note will not
+  # draw, so there no need to make notes that say "none" or "nothing".
   #----------------------------------------------------------------------------
   def draw_base_special_note(x, y, width)
     return if @@ln == info_ln_max
@@ -450,6 +459,10 @@ class Window_Info < Window_Base
                 Vocab::base_special_note_label)
       @@ln += 1; end
   end
+    
+#**** Editing beyond this point should be unnecessary.****#
+
+
 #^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^#
 #   * Page Layout Methods
 #^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^#
@@ -549,13 +562,7 @@ class Window_Info < Window_Base
   # * Get Maximum Number of Pages
   #--------------------------------------------------------------------------
   def info_page_max
-    if @item.is_a?(RPG::Enemy)
-      return 4
-    elsif @item.is_a?(RPG::Class)
-      return 3
-    else
       return 2
-    end
   end
   #--------------------------------------------------------------------------
   # * Frame Update
