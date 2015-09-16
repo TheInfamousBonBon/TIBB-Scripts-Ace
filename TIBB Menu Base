@@ -16,7 +16,7 @@ $imported["TIBB-MenuBase"] = true
 # -----------------------------------------------------------------------------
 # 2015.09.02 - Added Config Module for various Bonus, Flip, and Block too reduce
 #             the need to go through scripts.  Added $imported method.
-# 2015.09.13 - Moved Block names to Vocab.
+# 2015.09.13 - Moved Block names to Vocab and added some new Vocab.
 #==============================================================================
 #==============================================================================
 # ▼ Introduction
@@ -24,6 +24,8 @@ $imported["TIBB-MenuBase"] = true
 # Includes Vocab module and Window_Base Add-On's that I made for a tutorial.
 # This script is a Base or Core script for other Menu Scripts.  This does very
 # little on its own.
+#
+# I still plan on adding methods for drawing DeBuff Rates and Parameter Rates.
 #==============================================================================
 #==============================================================================
 # ▼ Instructions
