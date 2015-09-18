@@ -1,7 +1,7 @@
 #==============================================================================
-# ▼ Info Window Base ver. 1.01
+# ▼ Info Window Base ver. 1.02
 # - Engine: RPG Maker Ace
-# - Created: 2015.09.12
+# - Created: 2015.09.09
 # - Requires: TIBB Menu Base 1.02 or higher
 # - Terms of Use:  Free to use commercially or non-commercially with credit
 #      to The Infamous Bon Bon.
@@ -15,6 +15,8 @@ $imported["TIBB-InfoWindowBase"] = true
 # ▼ Updates
 # -----------------------------------------------------------------------------
 # 2015.09.12 - Minor changes to Vocab module.
+# 2015.09.17 - Added combined damage_type_title to the Usable Damage Block to
+#               save space.
 #==============================================================================
 #==============================================================================
 # ▼ Introduction
@@ -66,8 +68,8 @@ module Vocab
   #----------------------------------------------------------------------------
   def self.usable_general_title; "General Info"; end
   def self.usable_damage_title; "Variable Dmg/Rec Effect"; end
-  def self.usable_effects_title; "Effects"; end
-  def self.usable_effects_title_alt; "Additional Effects"; end
+  def self.usable_effects_title; "Additional Effects"; end
+  def self.usable_effects_title_alt; "Effects"; end
   def self.equip_general_title; "General Info"; end
   def self.equip_parameter_title; "Parameter Bonuses"; end
   def self.base_features_title; "Features"; end
@@ -191,8 +193,8 @@ module Vocab
       when 0; "None"
       when 1; self.hp_a + " Damage"
       when 2; self.mp_a + " Damage"
-      when 3; self.hp_a + " Recover"
-      when 4; self.mp_a + " Recover"
+      when 3; self.hp_a + " Recovery"
+      when 4; self.mp_a + " Recovery"
       when 5; self.hp_a + " Drain"
       when 6; self.mp_a + " Drain"
     end
@@ -206,7 +208,7 @@ module Vocab
     end
   end
   # Damage Formula
-  def self.usable_dmg_formula_label; "Dmg/Rec Factors"; end
+  def self.usable_dmg_formula_label; "Factors"; end
   def self.formula_user;             "User's"; end
   def self.formula_target;           "Target's"; end
   # Hit Type
@@ -308,15 +310,16 @@ module TIBB
     
     #--------------------------------------------------------------------------
     # * Usable Damage Block
-    # Applies to Skills and Items.  If 'DrawDamageIfNone = false' then the
-    # block will not draw if Damage Type is None.  If true it will draw it
-    # no matter what.  By keeping it false you allow more room for Usable
-    # Effects when there is no damage.
+    # Applies to Skills and Items.  if DrawWhenDamageNone = true then this block
+    # will draw even when there is no variable damage/ recovery/ drain.  But
+    # if it is false then this whole block will be skipped if there is none,
+    # leaving more room for the Effects block (which will probably be needed).
     #--------------------------------------------------------------------------
-    DrawDamageIfNone = false
+    DrawWhenDamageNone = false
     UsableDamage = [
-    :damage_title,
-    :damage_type,
+    #:damage_title,
+    :damage_type_title,
+    #:damage_type,
     :damage_element,
     :damage_formula,
     :damage_variance,
@@ -325,7 +328,7 @@ module TIBB
     ] # Removing this would be bad
     
     #--------------------------------------------------------------------------
-    # * Usable Damage Block
+    # * Usable Effects Block
     # Applies to Skills and Items.
     #--------------------------------------------------------------------------
     UsableEffects = [
@@ -474,13 +477,13 @@ class Window_Info < Window_Base # Removing this would be bad
     if @page_index == 0
       draw_usable_general(x, y, width)
     elsif @page_index == 1
-      if TIBB::Config::DrawDamageIfNone
+      if TIBB::Config::DrawWhenDamageNone
         draw_usable_damage(x, y, width)
-      else; if @@ref[@item.id].damage.type != 0
-        draw_usable_damage(x, y, width); end
+      elsif @@ref[@item.id].damage.type != 0
+        draw_usable_damage(x, y, width)
       end
       draw_usable_effects(x, y, width)
-    end
+    end #elsif @page_index == 1
   end
   #--------------------------------------------------------------------------
   # * Draw Equipment Information
@@ -562,7 +565,10 @@ class Window_Info < Window_Base # Removing this would be bad
   # * Get Maximum Number of Pages
   #--------------------------------------------------------------------------
   def info_page_max
-      return 2
+    if @item.is_a?(RPG::Skill)
+      if @@ref[@item.id].damage.type != 0
+        return 3; else; return 2; end
+    else; return 2; end
   end
   #--------------------------------------------------------------------------
   # * Frame Update
@@ -641,7 +647,11 @@ class Window_Info < Window_Base # Removing this would be bad
       when :empty_space
         @@ln += 1
       when :damage_title
-        text = Vocab.usable_damage_title#"Variable Dmg/Rec Effect"
+        text = Vocab.usable_damage_title
+        draw_block_title(x - 4, y  + @@fs * @@ln, text, width + 8)
+        @@ln += 1
+      when :damage_type_title
+        text = Vocab.dmg_type(@@ref[@item.id].damage.type)
         draw_block_title(x - 4, y  + @@fs * @@ln, text, width + 8)
         @@ln += 1
       when :damage_type
@@ -1638,7 +1648,6 @@ class Window_Info < Window_Base # Removing this would be bad
     change_color(system_color)
     text = Vocab::usable_dmg_formula_label
     draw_text(x, y + @@fs * @@ln, width, line_height, text)
-    @@ln += 1
     change_color(normal_color)
     unless utext.empty?
       user_text = Vocab::formula_user + utext
