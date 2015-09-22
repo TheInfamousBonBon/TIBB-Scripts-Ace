@@ -1,1 +1,1402 @@
+#==============================================================================
+# ▼ Info Data Screen ver. 1.00
+# - Engine: RPG Maker Ace
+# - Created: 2015.09.19
+# - Requires: TIBB Menu Base 1.02 & Info Window Base 1.02 or higher
+# - Terms of Use:  Free to use commercially or non-commercially with credit
+#      to The Infamous Bon Bon.
+# - Find Me @: https://ccrgeek.wordpress.com/ or http://forums.rpgmakerweb.com/
+#==============================================================================
 
+$imported = {} if $imported.nil?
+$imported["TIBB-DataScreen"] = true
+
+#==============================================================================
+# ▼ Updates
+# -----------------------------------------------------------------------------
+# None
+#==============================================================================
+#==============================================================================
+# ▼ Introduction
+# -----------------------------------------------------------------------------
+# This utilizes the Info Windows in a new scene Data.  This uses all the
+# previously created windows and also adds Enemies, Classes, and States.
+#
+# Objects get added to the data lists as they are found.  Weapons, Armor, and
+# Items as players acquire them, Skills as characters learn them, States as they
+# are used on players or enemies, Enemies once they are killed, Classes as 
+# characters change to them.  Everything that comes on characters is added to 
+# the found list automatically.  All can be turned on by default if you want,
+# which is handy for game testing.
+#
+# Included commands can be turned off if you wish and the command window will
+# adjust appropriately.
+#==============================================================================
+#==============================================================================
+# ▼ Instructions
+# -----------------------------------------------------------------------------
+# Edit the settings in the modules below as you see fit.
+#==============================================================================
+#==============================================================================
+# ▼ Compatibility
+# -----------------------------------------------------------------------------
+# Overwritten methods:
+#   Window_Info - Get Maximum Number of Pages
+# Aliased methods:
+#   Window_Info - Determine Ref (Reference)
+#   Game Party - Initialize All Item Lists
+#   Game Party - Increase/Decrease Items
+#   Game Battler - Add State
+#   Game Battler - Knock Out
+#   Game Actor - Setup
+#   Game Actor - Change Class
+#   Game Actor - Learn Skill
+#   Game Actor - Initialize Equipment
+#   Window Menu Command - For Adding Original Commands
+#   Scene Menu - Create Command Window
+#==============================================================================
+#==============================================================================
+# ** Vocab
+#------------------------------------------------------------------------------
+#  This module defines terms and labels used in the Info Windows scripts.
+#==============================================================================
+module Vocab
+  #----------------------------------------------------------------------------
+  # * Title Text Vocab
+  #----------------------------------------------------------------------------
+  def self.state_general_title; "General Info"; end
+  def self.state_removal_conditions_title; "Removal Conditions"; end
+  def self.enemy_rewards_title; "Rewards"; end
+  # Drop Items
+  def self.enemy_drop_items_label; "Drop Items"; end
+  def self.enemy_drop_item_kind_none; "--None--"; end
+  def self.enemy_drop_probability_label; "Rate"; end
+  # Actions
+  def self.enemy_actions_label; "Actions"; end
+  def self.enemy_action_rating_label; "Rank"; end
+  #----------------------------------------------------------------------------
+  # * State Vocab
+  # These apply to items found in the States Tab of the database.
+  #----------------------------------------------------------------------------
+  def self.state_priority_label; "Priority"; end
+  # Restriction
+  def self.state_restriction_label; "Restriction"; end
+  def self.restriction(value)
+    case value
+      when 0; "None"
+      when 1; "Attack Enemy"
+      when 2; "Attack Enemy or Ally"
+      when 3; "Attack Ally"
+      when 4; "Cannot Act"
+    end
+  end
+  # Removal Conditions
+  def self.state_remove_at_battle_end_label; "Remove at Battle End"; end
+  def self.state_remove_by_restriction_label; "Remove by Restriction"; end
+  def self.state_auto_removal_timing_label; "Remove Automatically"; end
+  def self.auto_removal_timing(value)
+    case value
+      when 0; "None"
+      when 1; " Actions"
+      when 2; " Turns"
+    end
+  end
+  def self.state_remove_by_damage_label; "Remove by Damage Chance"; end
+  def self.state_chance_by_damage_suffix; "%"; end
+  def self.state_remove_by_walking_label; "Remove by Walking"; end
+  def self.state_steps_to_remove_suffix; " Steps"; end
+  def self.no_removal_label; "--Special--"; end
+  #----------------------------------------------------------------------------
+  # * Enemy Vocab
+  # These apply to items found in the Enemies Tab of the database.
+  #----------------------------------------------------------------------------
+  # Rewards
+  def self.enemy_reward_exp; "Exp"; end
+  def self.enemy_reward_gold; self.currency_unit; end
+  
+  #----------------------------------------------------------------------------
+  # * Class Vocab
+  # These apply to items found in the Classes Tab of the database.
+  #----------------------------------------------------------------------------
+  def self.exp_for_level_label; "Experience Needed"; end
+end
+#==============================================================================
+# ** Config
+#------------------------------------------------------------------------------
+# Here you can change the settings used in the Info Window Screens.
+#==============================================================================
+module TIBB
+  module Config
+    #--------------------------------------------------------------------------
+    # * Basic Configuration
+    #--------------------------------------------------------------------------
+    # Show all Info in Data screen by default (useful for game testing).
+    # Can be set to true or false
+    ShowAllInfo = true
+    # Adjust which commands are shown in the Data Screen.  Can be true or false.
+    ShowWeaponCommand = true
+    ShowArmorCommand = true
+    ShowItemCommand = true
+    ShowKeyItemCommand = true
+    ShowSkillCommand = true
+    ShowEnemyCommand = true
+    ShowClassCommand = true
+    ShowStateCommand = true
+    # Adjust if you want to include Key Items with Items.  Good to use if you
+    # decide not to show KeyItem Command.  Can be true or false.
+    IncludeKeyWithItems = true
+    #--------------------------------------------------------------------------
+    # * Enemy Common Configuration
+    #--------------------------------------------------------------------------
+    # Allows you to have the background battler on the Features page of the 
+    # Enemy Info Window.
+    DrawBattlerOnFeatures = true
+    # Adjusts the opacity of the battler in the background. Can be set to 0-255.
+    EnemyOpacity = 100
+    # Set the width/ height in pixels of the Adjustable Battler Image used.
+    EnemyImageSize = 144
+    # Allows you to adjust the x position of the Adjustable Battler Image.
+    # Negative values move it left.  Positive values move it right.
+    EnemyImageXmod = 0
+    
+    #--------------------------------------------------------------------------
+    # * Enemy General Block
+    #--------------------------------------------------------------------------
+    EnemyGeneral = [
+    #:name,
+    #:id,
+    #:background_battler,
+    :adjustable_battler,
+    :empty_space,
+    :empty_space,
+    :empty_space,
+    :empty_space,
+    :empty_space,
+    :empty_space, 
+    :empty_space, 
+    :empty_space, 
+    :parameters_title,
+    :parameters,
+    #:special_note,
+    #:empty_space,
+    ] # Removing this would be bad
+    
+    #--------------------------------------------------------------------------
+    # * Enemy Spoils Block
+    #--------------------------------------------------------------------------
+    # Allows you to make the drop probability a percent (%) instead of a
+    # fraction (1/n). true for % and false for fraction.
+    DropProbPercent = true
+    EnemySpoils = [
+    #:background_battler,
+    :spoils_reward_title,
+    :adjustable_battler, #doesn't add a line so its position doesn't interfere
+    :experience_gained,
+    :gold_gained,
+    :empty_space,
+    :empty_space,
+    :empty_space,
+    :empty_space,
+    :empty_space,
+    :empty_space,
+    :spoils_drop_item_title,
+    :drop_items,
+    #:empty_space,
+    ] # Removing this would be bad
+    
+    #--------------------------------------------------------------------------
+    # * Enemy Actions Block
+    #--------------------------------------------------------------------------
+    EnemyActions = [
+    :background_battler,
+    :enemy_actions_title,
+    #:adjustable_battler,
+    :actions,
+    #:empty_space,
+    ] # Removing this would be bad
+    
+    #--------------------------------------------------------------------------
+    # * State General Block
+    #--------------------------------------------------------------------------
+    StateGeneral = [
+    :general_state_title,
+    #:name,
+    #:id,
+    :restriction,
+    :priority,
+    :state_removal_title,
+    :removal_conditions,
+    #:special_note,
+    #:empty_space,
+    ] # Removing this would be bad
+    
+    #--------------------------------------------------------------------------
+    # * Class Param Block
+    #--------------------------------------------------------------------------
+    # Adjusts the level shown in the parameters of the window, top section.
+    ClassParamTier1 = 1
+    # Adjusts the level shown in the parameters of the window, bottom section.
+    ClassParamTier2 = 10
+    ClassParam = [
+    #:name,
+    #:id,
+    :parameter_title_tier1,
+    :parameter_tier1,
+    :experience_tier1,
+    :parameter_title_tier2,
+    :parameter_tier2,
+    :experience_tier2,
+    #:special_note,
+    #:empty_space,
+    ] # Removing this would be bad
+    
+    #--------------------------------------------------------------------------
+    # * Class Learnings Block
+    #--------------------------------------------------------------------------
+    # Adjusts the number of learning (skills learned at levels) pages that are
+    # displayed. 0, 1, 2, 3 are the only valid values.
+    LearningsPages = 2
+    ClassLearn = [
+    :class_learning_title,
+    :learnings,
+    #:empty_space,
+    ] # Removing this would be bad
+    
+  end #module Config
+end #module TIBB
+#==============================================================================
+# ** Window_Info
+#------------------------------------------------------------------------------
+#  This window displays info from the database for Weapons, Armor, Items, 
+#   States, Classes, Enemies, and/or Skills.
+#==============================================================================
+class Window_Info < Window_Base
+#^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^#
+#   * Page Layout Methods
+#^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^#
+  #--------------------------------------------------------------------------
+  # * Draw Enemy Information
+  #--------------------------------------------------------------------------
+  def draw_enemy_info(x, y, width)
+    if @page_index == 0
+      draw_enemy_general(x, y, width)
+    elsif @page_index == 1
+      draw_enemy_battler if TIBB::Config::DrawBattlerOnFeatures
+      draw_base_features(x, y, width)
+    elsif @page_index == 2
+      draw_enemy_spoils(x, y, width)
+    elsif @page_index == 3
+      draw_enemy_actions_block
+    end    
+  end
+  #--------------------------------------------------------------------------
+  # * Draw Class Information
+  #--------------------------------------------------------------------------
+  def draw_class_info(x, y, width)
+      make_learning_arrays
+    if @page_index == 0
+      draw_class_param(x, y, width)
+    elsif @page_index == 1
+      draw_base_features(x, y, width)
+    elsif @page_index == 2
+      draw_class_learnings(x, y, width)
+    elsif @page_index == 3
+      draw_class_learnings(x, y, width)
+    elsif @page_index == 4
+      draw_class_learnings(x, y, width)
+    end    
+  end
+  #--------------------------------------------------------------------------
+  # * Draw State Information
+  #--------------------------------------------------------------------------
+  def draw_state_info(x, y, width)
+    if @page_index == 0
+      draw_state_general(x, y, width)
+    elsif @page_index == 1
+      draw_base_features(x, y, width)
+    end    
+  end  
+#^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^#
+#   * Block Methods
+#^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^#
+  #----------------------------------------------------------------------------
+  # * Draw Enemy General Block
+  #----------------------------------------------------------------------------
+  def draw_enemy_general(x, y, width)
+    for method in TIBB::Config::EnemyGeneral
+      case method
+      when :empty_space
+        @@ln += 1
+      when :name
+        draw_base_name(x, y, width)
+      when :id
+        draw_base_id(x, y, width)
+      when :special_note
+        draw_base_special_note(x, y, width)
+      when :adjustable_battler
+        draw_enemy_adjustable_battler(y)
+      when :background_battler
+        draw_enemy_battler
+      when :parameters_title
+        text = Vocab.nparameter_title
+        draw_block_title(x - 4, y  + @@fs * @@ln, text, width + 8)
+        @@ln += 1
+      when :parameters
+        draw_equip_nparam(x, y, width)
+      else; ;end
+    end #for method in TIBB::Config::EnemyGeneral
+  end
+  #----------------------------------------------------------------------------
+  # * Draw Enemy Rewards Block
+  #----------------------------------------------------------------------------
+  def draw_enemy_spoils(x, y, width)
+    for method in TIBB::Config::EnemySpoils
+      case method
+      when :empty_space
+        @@ln += 1
+      when :adjustable_battler
+        draw_enemy_adjustable_battler(y)
+      when :background_battler
+        draw_enemy_battler
+      when :experience_gained
+        draw_enemy_reward_exp(x, y, width)
+      when :gold_gained
+        draw_enemy_reward_gold(x, y, width)
+      when :spoils_reward_title
+        text = Vocab.enemy_rewards_title
+        draw_block_title(x - 4, y  + @@fs * @@ln, text, width + 8)
+        @@ln += 1
+      when :spoils_drop_item_title
+        text = Vocab.enemy_drop_items_label
+        draw_block_title(x - 4, y  + @@fs * @@ln, text, width - 60, 0)
+        text = Vocab.enemy_drop_probability_label
+        draw_block_title(width - 60, y  + @@fs * @@ln, text, 68)
+        @@ln += 1
+      when :drop_items
+        draw_enemy_reward_drop_items(x, y, width)
+      else; ;end
+    end #for method in TIBB::Config::EnemySpoils
+  end
+  #----------------------------------------------------------------------------
+  # * Draw Enemy Actions Block
+  #----------------------------------------------------------------------------
+  def draw_enemy_actions_block(x, y, width)
+    for method in TIBB::Config::EnemyActions
+      case method
+      when :empty_space
+        @@ln += 1
+      when :adjustable_battler
+        draw_enemy_adjustable_battler(y)
+      when :background_battler
+        draw_enemy_battler
+      when :enemy_actions_title
+        text = Vocab.enemy_actions_label
+        draw_block_title(x - 4, y  + @@fs * @@ln, text, width - 60, 0)      
+        text = Vocab.enemy_action_rating_label
+        draw_block_title(width - 60, y  + @@fs * @@ln, text, 68)
+        @@ln += 1
+      when :actions
+        draw_enemy_actions(x, y, width)
+      else; ;end
+    end #for method in TIBB::Config::EnemyActions
+  end
+  #----------------------------------------------------------------------------
+  # * Draw State General Block
+  #----------------------------------------------------------------------------
+  def draw_state_general(x, y, width)
+    for method in TIBB::Config::StateGeneral
+      case method
+      when :empty_space
+        @@ln += 1
+      when :name
+        draw_base_name(x, y, width)
+      when :id
+        draw_base_id(x, y, width)
+      when :special_note
+        draw_base_special_note(x, y, width)
+      when :general_state_title
+        text = Vocab.state_general_title
+        draw_block_title(x - 4, y  + @@fs * @@ln, text, width + 8)
+        @@ln += 1
+      when :state_removal_title
+        text = Vocab.state_removal_conditions_title
+        draw_block_title(x - 4, y  + @@fs * @@ln, text, width + 8)
+        @@ln += 1
+      when :restriction
+        draw_state_restriction(x, y, width)
+      when :priority
+        draw_state_priority(x, y, width)
+      when :removal_conditions
+        draw_state_removal_conditions(x, y, width)
+      else; ;end
+    end #for method in TIBB::Config::StateGeneral
+  end
+  #----------------------------------------------------------------------------
+  # * Draw Class Param Block
+  #----------------------------------------------------------------------------
+  def draw_class_param(x, y, width)
+    for method in TIBB::Config::ClassParam
+      case method
+      when :empty_space
+        @@ln += 1
+      when :name
+        draw_base_name(x, y, width)
+      when :id
+        draw_base_id(x, y, width)
+      when :special_note
+        draw_base_special_note(x, y, width)
+      when :parameter_title_tier1
+        text = Vocab.nparameter_title + " at " +
+              Vocab.level_a + " " + TIBB::Config::ClassParamTier1.to_s
+        draw_block_title(x - 4, y  + @@fs * @@ln, text, width + 8)
+        @@ln += 1
+      when :parameter_tier1
+        draw_class_nparam_block(x, y, width, TIBB::Config::ClassParamTier1)
+      when :experience_tier1
+        draw_exp_for_level(x, y, width, TIBB::Config::ClassParamTier1)
+      when :parameter_title_tier2
+        text = Vocab.nparameter_title + " at " +
+              Vocab.level_a + " " + TIBB::Config::ClassParamTier2.to_s
+        draw_block_title(x - 4, y  + @@fs * @@ln, text, width + 8)
+        @@ln += 1
+      when :parameter_tier2
+        draw_class_nparam_block(x, y, width, TIBB::Config::ClassParamTier2)
+      when :experience_tier2
+        draw_exp_for_level(x, y, width, TIBB::Config::ClassParamTier2)
+      else; ;end
+    end #for method in TIBB::Config::ClassParam
+  end
+  #----------------------------------------------------------------------------
+  # * Draw Class Learnings Block
+  #----------------------------------------------------------------------------
+  def draw_class_learnings(x, y, width)
+    for method in TIBB::Config::ClassLearn
+      case method
+      when :empty_space
+        @@ln += 1
+      when :class_learning_title
+        text = Vocab.skill
+        draw_block_title(x - 4, y  + @@fs * @@ln, text, width - 60, 0)
+        text = Vocab.level_a
+        draw_block_title(width - 60, y  + @@fs * @@ln, text, 68)
+        @@ln += 1
+      when :learnings
+        if @page_index == 2
+          draw_class_learnings1(x, y, width)
+        elsif @page_index == 3
+          draw_class_learnings2(x, y, width)
+        elsif @page_index == 4
+          draw_class_learnings3(x, y, width); end
+      else; ;end
+    end #for method in TIBB::Config::ClassParam
+  end
+#^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^#
+#   * Basic Structure Methods
+#^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^#
+  #--------------------------------------------------------------------------
+  # * Determine Ref (Reference)
+  # Because so many of the methods are shared between the many types, 
+  # I established @@ref on the refresh. 
+  #--------------------------------------------------------------------------
+  alias data_determine_ref determine_ref
+  def determine_ref
+    data_determine_ref
+    @@ref = $data_states  if @item.is_a?(RPG::State)
+    @@ref = $data_enemies  if @item.is_a?(RPG::Enemy)
+    @@ref = $data_classes  if @item.is_a?(RPG::Class)
+  end
+  #--------------------------------------------------------------------------
+  # * Get Maximum Number of Pages
+  #--------------------------------------------------------------------------
+  def info_page_max
+    if @item.is_a?(RPG::Enemy)
+      return 4
+    elsif @item.is_a?(RPG::Class)
+      total = 2 + TIBB::Config::LearningsPages
+      return total
+    else
+      return 2
+    end
+  end
+#^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^#
+#   * State Methods
+#   Used only by States
+#^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^#
+  #--------------------------------------------------------------------------
+  # * Draw State Restriction
+  #--------------------------------------------------------------------------
+  def draw_state_restriction(x, y, width)
+    return if @@ln == info_ln_max
+    change_color(system_color)
+    draw_text(x, y + @@fs * @@ln, width, line_height, 
+                Vocab.state_restriction_label)
+    change_color(normal_color)
+    text1 = Vocab.restriction(@@ref[@item.id].restriction)
+    draw_text(x, y + @@fs * @@ln, width, line_height, text1, 2)
+    @@ln += 1
+  end
+  #--------------------------------------------------------------------------
+  # * Draw State Priority
+  #--------------------------------------------------------------------------
+  def draw_state_priority(x, y, width)
+    return if @@ln == info_ln_max
+    change_color(system_color)
+    draw_text(x, y + @@fs * @@ln, width, line_height, 
+                Vocab.state_priority_label)
+    change_color(normal_color)
+    text1 = @@ref[@item.id].restriction
+    draw_text(x, y + @@fs * @@ln, width, line_height, text1, 2)
+    @@ln += 1
+  end
+  #--------------------------------------------------------------------------
+  # * Draw State Removal Conditions
+  #--------------------------------------------------------------------------
+  def draw_state_removal_conditions(x, y, width)
+    return if @@ln == info_ln_max
+    has_removal = false
+    if @@ref[@item.id].remove_at_battle_end
+      change_color(system_color)
+      draw_text(x, y + @@fs * @@ln, width, line_height, 
+                  Vocab.state_remove_at_battle_end_label)
+      has_removal = true
+      @@ln += 1
+    end
+    if @@ref[@item.id].remove_by_restriction
+      change_color(system_color)
+      draw_text(x, y + @@fs * @@ln, width, line_height, 
+                  Vocab.state_remove_by_restriction_label)
+      has_removal = true
+      @@ln += 1
+    end
+    if @@ref[@item.id].auto_removal_timing == 1
+      change_color(system_color)
+      text1 = Vocab.state_auto_removal_timing_label
+      draw_text(x, y + @@fs * @@ln, width, line_height, text1)
+      @@ln += 1
+      change_color(normal_color)
+      text2 = Vocab.auto_removal_timing(1)
+      text = @@ref[@item.id].min_turns.to_s + "-"
+      text += @@ref[@item.id].max_turns.to_s + text2
+      draw_text(x, y + @@fs * @@ln, width, line_height, text, 2)
+      has_removal = true
+      @@ln += 1
+    end
+    if @@ref[@item.id].auto_removal_timing == 2
+      change_color(system_color)
+      text1 = Vocab.state_auto_removal_timing_label
+      draw_text(x, y + @@fs * @@ln, width, line_height, text1)
+      @@ln += 1
+      change_color(normal_color)
+      text2 = Vocab.auto_removal_timing(2)
+      text = @@ref[@item.id].min_turns.to_s + "-"
+      text += @@ref[@item.id].max_turns.to_s + text2
+      draw_text(x, y + @@fs * @@ln, width, line_height, text, 2)
+      has_removal = true
+      @@ln += 1
+    end
+    if @@ref[@item.id].remove_by_damage
+      change_color(system_color)
+      text1 = Vocab.state_remove_by_damage_label
+      draw_text(x, y + @@fs * @@ln, width, line_height, text1)
+      @@ln += 1
+      change_color(normal_color)
+      text2 = Vocab.state_chance_by_damage_suffix
+      text = @@ref[@item.id].chance_by_damage.to_s + text2
+      draw_text(x, y + @@fs * @@ln, width, line_height, text, 2)
+      has_removal = true
+      @@ln += 1
+    end
+    if @@ref[@item.id].remove_by_walking
+      change_color(system_color)
+      text1 = Vocab.state_remove_by_walking_label
+      draw_text(x, y + @@fs * @@ln, width, line_height, text1)
+      @@ln += 1
+      change_color(normal_color)
+      text2 = Vocab.state_steps_to_remove_suffix
+      text = @@ref[@item.id].steps_to_remove.to_s  + text2
+      draw_text(x, y + @@fs * @@ln, width, line_height, text, 2)
+      has_removal = true
+      @@ln += 1
+    end
+    draw_text(x, y  + @@fs * @@ln, width, line_height, 
+              Vocab.no_removal_label, 1) unless has_removal
+  end
+#^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^#
+#   * Class Methods
+#   Used only by Classes
+#^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^#
+  #--------------------------------------------------------------------------
+  # * Draw Class Params at level n
+  #--------------------------------------------------------------------------
+  def draw_class_params_level(x, y, width, param_id, n)
+    return if @@ln == info_ln_max
+    rect = Rect.new(x + @@column * (@@col_width + @@hs), y + @@fs * @@ln, 
+                      @@col_width, line_height)
+    change_color(system_color)
+    name = Vocab.param(param_id)
+    draw_text(rect, name)
+    change_color(normal_color)
+    value = @@ref[@item.id].params[param_id, n]
+    draw_text(rect, value, 2)
+    @@column += 1
+    if @@column == @@col_max
+      @@ln += 1
+      @@column = 0
+    end
+  end
+  #----------------------------------------------------------------------------
+  # * Draw Class Normal Parameter Block
+  #----------------------------------------------------------------------------
+  def draw_class_nparam_block(x, y, width, n)
+    return if @@ln == info_ln_max
+    @@column = 0
+    @@col_max = 2
+    @@col_width = ((width - (@@col_max - 1) * @@hs) / @@col_max)
+    8.times {|i| draw_class_params_level(x, y, width, i, n) }
+  end
+  #--------------------------------------------------------------------------
+  # * Draw Class Experience Needed for Level n.
+  #--------------------------------------------------------------------------
+  def draw_exp_for_level(x, y, width, n)
+    return if @@ln == info_ln_max
+    change_color(system_color)
+    text1 = Vocab.exp_for_level_label
+    draw_text(x, y + @@fs * @@ln, width, line_height, text1)
+    change_color(normal_color)
+    text2 = @@ref[@item.id].exp_for_level(n)
+    draw_text(x, y + @@fs * @@ln, width, line_height, text2, 2)
+    @@ln += 1
+  end
+  #--------------------------------------------------------------------------
+  # * Draw Make Learning Arrays
+  # Necessary to divide learning over multiple pages.
+  #--------------------------------------------------------------------------
+  def make_learning_arrays
+    @@learn1 = []
+    @@learn2 = []
+    @@learn3 = []
+    @@ref[@item.id].learnings.each_with_index do |learn,i|
+      ln_mod = info_ln_max - 1
+      if i < ln_mod
+        @@learn1.push(learn)
+      elsif i < (ln_mod * 2)
+        @@learn2.push(learn)
+      else
+        @@learn3.push(learn)
+      end
+    end #@@ref[@item.id].learnings.each_with_index do |learn,i|
+  end
+  #--------------------------------------------------------------------------
+  # * Draw Class Learning 1
+  #--------------------------------------------------------------------------
+  def draw_class_learnings1(x, y, width)
+    return if @@ln == info_ln_max
+    @@learn1.each do |lrn|
+      return if @@ln == info_ln_max
+      change_color(system_color)
+      text1 = $data_skills[lrn.skill_id].name
+      draw_text(x, y + @@fs * @@ln, width - 40, line_height, text1)
+      change_color(normal_color)
+      text2 = lrn.level
+      draw_text(x + width - 60, y + @@fs * @@ln, 60, line_height, text2, 1)
+      @@ln += 1
+    end
+  end
+  #--------------------------------------------------------------------------
+  # * Draw Class Learning 2
+  #--------------------------------------------------------------------------
+  def draw_class_learnings2(x, y, width)
+    return if @@ln == info_ln_max
+    @@learn2.each do |lrn|
+      return if @@ln == info_ln_max
+      change_color(system_color)
+      text1 = $data_skills[lrn.skill_id].name
+      draw_text(x, y + @@fs * @@ln, width - 40, line_height, text1)
+      change_color(normal_color)
+      text2 = lrn.level
+      draw_text(x + width - 60, y + @@fs * @@ln, 60, line_height, text2, 1)
+      @@ln += 1
+    end
+  end
+  #--------------------------------------------------------------------------
+  # * Draw Class Learning 3
+  #--------------------------------------------------------------------------
+  def draw_class_learnings3(x, y, width)
+    return if @@ln == info_ln_max
+    @@learn3.each do |lrn|
+      return if @@ln == info_ln_max
+      change_color(system_color)
+      text1 = $data_skills[lrn.skill_id].name
+      draw_text(x, y + @@fs * @@ln, width - 40, line_height, text1)
+      change_color(normal_color)
+      text2 = lrn.level
+      draw_text(x + width - 60, y + @@fs * @@ln, 60, line_height, text2, 1)
+      @@ln += 1
+    end
+  end
+#^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^#
+#   * Enemy Methods
+#   Used only by Enemies
+#^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^#
+  #--------------------------------------------------------------------------
+  # * Draw Enemy Battler
+  # Centers on battler image and takes a slice the size of the Info Window.
+  #--------------------------------------------------------------------------
+  def draw_enemy_battler
+    return if @@ln == info_ln_max
+    filename = @@ref[@item.id].battler_name
+    hue = @@ref[@item.id].battler_hue
+    bitmap = Cache.battler(filename, hue)
+    rh = contents.height
+    rw = contents.width
+    rx = bitmap.width / 2 - rw / 2
+    ry = bitmap.height / 2 - rh / 2
+    rect = Rect.new(rx, ry, rw, rh)
+    contents.blt(0, 0, bitmap, rect, TIBB::Config::EnemyOpacity)
+    bitmap.dispose
+  end
+  #--------------------------------------------------------------------------
+  # * Draw Enemy Adjustable Battler
+  # Resizes the battler image to specified amount in Config
+  #--------------------------------------------------------------------------
+  def draw_enemy_adjustable_battler(y)
+    filename = @@ref[@item.id].battler_name
+    hue = @@ref[@item.id].battler_hue
+    bitmap = Cache.battler(filename, hue)
+    rw = [bitmap.width,bitmap.height].max
+    rh = [bitmap.width,bitmap.height].max
+    rx = bitmap.width / 2 - rw / 2
+    ry = bitmap.height / 2 - rh / 2
+    rect = Rect.new(rx, ry, rw, rh)
+    bw = [rw,TIBB::Config::EnemyImageSize].min
+    bh = [rh,TIBB::Config::EnemyImageSize].min
+    bx = contents.width / 2 - bw / 2 + TIBB::Config::EnemyImageXmod
+    by = TIBB::Config::EnemyImageSize - bh + y + @@fs * @@ln
+    rect2 = Rect.new(bx, by, bw, bh)
+    contents.stretch_blt(rect2, bitmap, rect, 255)
+    bitmap.dispose
+  end
+  #--------------------------------------------------------------------------
+  # * Draw Enemy Experience Gained
+  #--------------------------------------------------------------------------
+  def draw_enemy_reward_exp(x, y, width)
+    return if @@ln == info_ln_max
+    change_color(system_color)
+    text1 = Vocab.enemy_reward_exp
+    draw_text(x, y + @@fs * @@ln, width, line_height, text1)
+    change_color(normal_color)
+    text2 = @@ref[@item.id].exp.to_s
+    draw_text(x, y + @@fs * @@ln, width, line_height, text2, 2)
+    @@ln += 1
+  end
+  #--------------------------------------------------------------------------
+  # * Draw Enemy Gold Gained
+  #--------------------------------------------------------------------------
+  def draw_enemy_reward_gold(x, y, width)
+    return if @@ln == info_ln_max
+    change_color(system_color)
+    text1 = Vocab.enemy_reward_gold
+    draw_text(x, y + @@fs * @@ln, width, line_height, text1)
+    change_color(normal_color)
+    text2 = @@ref[@item.id].gold.to_s
+    draw_text(x, y + @@fs * @@ln, width, line_height, text2, 2)
+    @@ln += 1
+  end
+  #--------------------------------------------------------------------------
+  # * Draw Enemy Drop Items
+  #--------------------------------------------------------------------------
+  def draw_enemy_reward_drop_items(x, y, width)
+    return if @@ln == info_ln_max
+    @@ref[@item.id].drop_items.each do |di|
+      if di.kind == 0
+        change_color(system_color)
+        text1 = Vocab.enemy_drop_item_kind_none
+        draw_text(x, y + @@fs * @@ln, width - 60, line_height, text1)
+        change_color(normal_color)
+        text2 = "1/--" unless TIBB::Config::DropProbPercent
+        text2 = "-- %" if TIBB::Config::DropProbPercent
+        draw_text(x + width - 60, y + @@fs * @@ln, 68, line_height, text2, 1)
+        @@ln += 1
+      elsif di.kind == 1
+        change_color(system_color)
+        text1 = $data_items[di.data_id].name
+        draw_text(x, y + @@fs * @@ln, width - 60, line_height, text1)
+        change_color(normal_color)
+        text = (100 / di.denominator).to_i
+        text2 = text.to_s + "%" if TIBB::Config::DropProbPercent
+        text2 = "1/" + di.denominator.to_s unless TIBB::Config::DropProbPercent
+        draw_text(x + width - 60, y + @@fs * @@ln, 68, line_height, text2, 1)
+        @@ln += 1
+      elsif di.kind == 2
+        change_color(system_color)
+        text1 = $data_weapons[di.data_id].name
+        draw_text(x, y + @@fs * @@ln, width - 60, line_height, text1)
+        change_color(normal_color)
+        text = (100 / di.denominator).to_i
+        text2 = text.to_s + "%" if TIBB::Config::DropProbPercent
+        text2 = "1/" + di.denominator.to_s unless TIBB::Config::DropProbPercent
+        draw_text(x + width - 60, y + @@fs * @@ln, 68, line_height, text2, 1)
+        @@ln += 1
+      elsif di.kind == 3
+        change_color(system_color)
+        text1 = $data_armors[di.data_id].name
+        draw_text(x, y + @@fs * @@ln, width - 60, line_height, text1)
+        change_color(normal_color)
+        text = (100 / di.denominator).to_i
+        text2 = text.to_s + "%" if TIBB::Config::DropProbPercent
+        text2 = "1/" + di.denominator.to_s unless TIBB::Config::DropProbPercent
+        draw_text(x + width - 60, y + @@fs * @@ln, 68, line_height, text2, 1)
+        @@ln += 1
+      end #if kind == 0
+    end #@@ref[@item.id].drop_items.each_index do |kind|
+  end #draw_enemy_reward_drop_items(x, y, width)
+  #--------------------------------------------------------------------------
+  # * Draw Enemy Actions
+  #--------------------------------------------------------------------------
+  def draw_enemy_actions(x, y, width)
+    return if @@ln == info_ln_max
+    @@ref[@item.id].actions.each do |act|
+      change_color(system_color)
+      text1 = $data_skills[act.skill_id ].name
+      draw_text(x, y + @@fs * @@ln, width - 60, line_height, text1)
+      change_color(normal_color)
+      text2 = act.rating
+      draw_text(x + width - 60, y + @@fs * @@ln, 68, line_height, text2, 1)
+      @@ln += 1
+    end
+  end
+end #class Window_Info < Window_Base
+#==============================================================================
+# ** Window_DataCategory
+#------------------------------------------------------------------------------
+#  This window is for selecting a category in the Data screen.
+#==============================================================================
+class Window_DataCategory < Window_Command
+  #--------------------------------------------------------------------------
+  # * Public Instance Variables
+  #--------------------------------------------------------------------------
+  attr_reader   :item_window
+  #--------------------------------------------------------------------------
+  # * Object Initialization
+  #--------------------------------------------------------------------------
+  def initialize
+    super(0, 0)
+  end
+  #--------------------------------------------------------------------------
+  # * Get Alignment
+  #--------------------------------------------------------------------------
+  def alignment
+    return 1
+  end
+  #--------------------------------------------------------------------------
+  # * Get Number of Lines to Show
+  #--------------------------------------------------------------------------
+  def visible_line_number
+    case @list.size
+    when 1..4; return 1; else; return 2; end
+  end
+  #--------------------------------------------------------------------------
+  # * Get Window Width
+  #--------------------------------------------------------------------------
+  def window_width
+    Graphics.width
+  end
+  #--------------------------------------------------------------------------
+  # * Calculate Width of Window Contents
+  #--------------------------------------------------------------------------
+  def contents_width
+    (item_width + spacing) * col_max - spacing
+  end
+  #--------------------------------------------------------------------------
+  # * Get Digit Count
+  #--------------------------------------------------------------------------
+  def col_max
+    case @list.size
+    when 3,5,6; return 3; when 2; return 2; when 1; return 1;else; return 4; end
+  end
+  #--------------------------------------------------------------------------
+  # * Frame Update
+  #--------------------------------------------------------------------------
+  def update
+    super
+    @item_window.category = current_symbol if @item_window
+  end
+  #--------------------------------------------------------------------------
+  # * Create Command List
+  #--------------------------------------------------------------------------
+  def make_command_list
+    add_command(Vocab::weapon,     :weapon) if TIBB::Config::ShowWeaponCommand
+    add_command(Vocab::armor,      :armor) if TIBB::Config::ShowArmorCommand
+    add_command(Vocab::item,       :item) if TIBB::Config::ShowItemCommand
+    add_command(Vocab::key_item,   :key_item) if TIBB::Config::ShowKeyItemCommand
+    add_command(Vocab::skill,       :skill) if TIBB::Config::ShowSkillCommand
+    add_command(Vocab.enemy_command, :enemy) if TIBB::Config::ShowEnemyCommand
+    add_command(Vocab.class_command, :class) if TIBB::Config::ShowClassCommand
+    add_command(Vocab.state_command, :state) if TIBB::Config::ShowStateCommand
+  end
+  #--------------------------------------------------------------------------
+  # * Set Item Window
+  #--------------------------------------------------------------------------
+  def item_window=(item_window)
+    @item_window = item_window
+    update
+  end
+end #class Window_DataCategory < Window_Command
+#==============================================================================
+# ** Window_DataList
+#------------------------------------------------------------------------------
+#  This window displays a list of all acquired items, weapons, or armors.
+#==============================================================================
+class Window_DataList < Window_Selectable
+  #--------------------------------------------------------------------------
+  # * Public Instance Variables
+  #--------------------------------------------------------------------------
+  attr_reader   :info_window            # Status window
+  #--------------------------------------------------------------------------
+  # * Object Initialization
+  #--------------------------------------------------------------------------
+  def initialize(x, y, width, height)
+    super
+    @category = :none
+    @data = []
+    select_last
+  end
+  #--------------------------------------------------------------------------
+  # * Set Category
+  #--------------------------------------------------------------------------
+  def category=(category)
+    return if @category == category
+    @category = category
+    refresh
+    self.oy = 0
+  end
+  #--------------------------------------------------------------------------
+  # * Get Number of Items
+  #--------------------------------------------------------------------------
+  def item_max
+    @data ? @data.size : 1
+  end
+  #--------------------------------------------------------------------------
+  # * Get Item
+  #--------------------------------------------------------------------------
+  def item
+    @data && index >= 0 ? @data[index] : nil
+  end
+  #--------------------------------------------------------------------------
+  # * Include in Item List?
+  #--------------------------------------------------------------------------
+  def include?(item)
+    case @category
+    when :weapon
+      return true if TIBB::Config::ShowAllInfo == true
+      return true if $game_party.found_weapons.include?(@@cat[item.id].id)
+    when :armor
+      return true if TIBB::Config::ShowAllInfo == true
+      return true if $game_party.found_armors.include?(@@cat[item.id].id)
+    when :item
+      if TIBB::Config::IncludeKeyWithItems
+        return true if TIBB::Config::ShowAllInfo == true
+        return true if $game_party.found_items.include?(@@cat[item.id].id)
+      else
+        return true if TIBB::Config::ShowAllInfo == true && !item.key_item?
+        return true if $game_party.found_items.include?(@@cat[item.id].id) && 
+                        !item.key_item?
+      end
+    when :key_item
+      return true if TIBB::Config::ShowAllInfo == true && item.key_item?
+      return true if $game_party.found_items.include?(@@cat[item.id].id) && 
+                        item.key_item?
+    when :state
+      return true if TIBB::Config::ShowAllInfo == true
+      return true if $game_party.found_states.include?(@@cat[item.id].id)
+    when :class
+      return true if TIBB::Config::ShowAllInfo == true
+      return true if $game_party.found_classes.include?(@@cat[item.id].id)
+    when :enemy
+      return true if TIBB::Config::ShowAllInfo == true
+      return true if $game_party.found_enemies.include?(@@cat[item.id].id)
+    when :skill
+      return true if TIBB::Config::ShowAllInfo == true
+      return true if $game_party.found_skills.include?(@@cat[item.id].id)
+    else
+      false
+    end #case @category
+  end
+  #--------------------------------------------------------------------------
+  # * Create Item List
+  #--------------------------------------------------------------------------
+  def make_item_list
+    determine_cat
+    @data = @@cat[1, @@cat.size - 1].select {|item| include?(item) }
+  end
+  #--------------------------------------------------------------------------
+  # * Determine Category
+  #--------------------------------------------------------------------------
+  def determine_cat
+    case @category
+    when :skill
+      @@cat = $data_skills
+    when :state
+      @@cat = $data_states
+    when :class
+      @@cat = $data_classes
+    when :enemy
+      @@cat = $data_enemies
+    when :item
+      @@cat = $data_items
+    when :weapon
+      @@cat = $data_weapons
+    when :armor
+      @@cat = $data_armors
+    when :key_item
+      @@cat = $data_items
+    end #case @category 
+  end
+  #--------------------------------------------------------------------------
+  # * Restore Previous Selection Position
+  #--------------------------------------------------------------------------
+  def select_last
+    select(@data.index($game_party.last_item.object) || 0)
+  end
+  #--------------------------------------------------------------------------
+  # * Draw Item
+  #--------------------------------------------------------------------------
+  def draw_item(index)
+    item = @data[index]
+    if item
+      rect = item_rect(index)
+      rect.width -= 4
+      text1 = (@@cat[item.id].id).to_s + " - "
+      draw_text(rect.x + 4, rect.y, 48, line_height, text1, 2)
+      draw_item_name(item, rect.x + 48, rect.y, contents.width - 52)
+    end
+  end
+  #--------------------------------------------------------------------------
+  # * Draw Item Name
+  #     enabled : Enabled flag. When false, draw semi-transparently.
+  #--------------------------------------------------------------------------
+  def draw_item_name(item, x, y, width)
+    return unless item
+    case @category
+    when :enemy, :class
+      change_color(normal_color)
+      draw_text(x, y, width, line_height, item.name)
+    else
+      draw_icon(item.icon_index, x, y)
+      change_color(normal_color)
+      draw_text(x + 25, y, width - 25, line_height, item.name)
+    end
+  end
+  #--------------------------------------------------------------------------
+  # * Set Info Window
+  #--------------------------------------------------------------------------
+  def info_window=(info_window)
+    @info_window = info_window
+    call_update_help
+  end
+  #--------------------------------------------------------------------------
+  # * Update Help Text
+  #--------------------------------------------------------------------------
+  def update_help
+    @help_window.set_item(item)
+    @info_window.item = item if @info_window
+  end
+  #--------------------------------------------------------------------------
+  # * Refresh
+  #--------------------------------------------------------------------------
+  def refresh
+    make_item_list
+    create_contents
+    draw_all_items
+  end
+end #class Window_DataList < Window_Selectable
+#==============================================================================
+# ** Game_Party
+#------------------------------------------------------------------------------
+#  This class handles parties. Information such as gold and items is included.
+# Instances of this class are referenced by $game_party.
+#==============================================================================
+class Game_Party < Game_Unit
+  #--------------------------------------------------------------------------
+  # --Alias method--
+  # * Initialize All Item Lists
+  #--------------------------------------------------------------------------
+  alias found_possession_data_init_all_items init_all_items
+  def init_all_items
+    found_possession_data_init_all_items
+    @found_weapons = []
+    @found_armors = []
+    @found_items = []
+    @found_classes = []
+    @found_states = []
+    @found_enemies = []
+    @found_skills = []
+  end
+  #--------------------------------------------------------------------------
+  # new method: found_weapons
+  #--------------------------------------------------------------------------
+  def found_weapons
+    return @found_weapons
+  end
+  #--------------------------------------------------------------------------
+  # new method: found_armors
+  #--------------------------------------------------------------------------
+  def found_armors
+    return @found_armors
+  end
+  #--------------------------------------------------------------------------
+  # new method: found_items
+  #--------------------------------------------------------------------------
+  def found_items
+    return @found_items
+  end
+  #--------------------------------------------------------------------------
+  # new method: found_enemies
+  #--------------------------------------------------------------------------
+  def found_enemies
+    return @found_enemies
+  end
+  #--------------------------------------------------------------------------
+  # new method: found_states
+  #--------------------------------------------------------------------------
+  def found_states
+    return @found_states
+  end
+  #--------------------------------------------------------------------------
+  # new method: found_classes
+  #--------------------------------------------------------------------------
+  def found_classes
+    return @found_classes
+  end
+  #--------------------------------------------------------------------------
+  # new method: found_skills
+  #--------------------------------------------------------------------------
+  def found_skills
+    return @found_skills
+  end
+  #--------------------------------------------------------------------------
+  # --Alias method--
+  # * Increase/Decrease Items
+  #--------------------------------------------------------------------------
+  alias found_data_gain_item gain_item
+  def gain_item(item, amount, include_equip = false)
+    found_data_gain_item(item, amount, include_equip = false)
+    if amount > 0
+      if item.is_a?(RPG::Weapon)
+        @found_weapons.push(item.id) unless @found_weapons.include?(item.id)
+      end
+      if item.is_a?(RPG::Armor)
+        @found_armors.push(item.id) unless @found_armors.include?(item.id)
+      end
+      if item.is_a?(RPG::Item)
+        @found_items.push(item.id) unless @found_items.include?(item.id)
+      end
+    end
+  end
+end # Game_Party < Game_Unit
+#==============================================================================
+# ** Game_Battler
+#------------------------------------------------------------------------------
+#  A battler class with methods for sprites and actions added. This class 
+# is used as a super class of the Game_Actor class and Game_Enemy class.
+#==============================================================================
+
+class Game_Battler < Game_BattlerBase
+  #--------------------------------------------------------------------------
+  # --Alias method--
+  # * Add State
+  #--------------------------------------------------------------------------
+  alias found_data_add_state add_state
+  def add_state(state_id)
+    unless $game_party.found_states.include?(state_id)
+      $game_party.found_states.push(state_id) if state_addable?(state_id)
+    end
+    found_data_add_state(state_id)
+  end
+  #--------------------------------------------------------------------------
+  # --Alias method--
+  # * Knock Out
+  #--------------------------------------------------------------------------
+  alias found_data_die die
+  def die
+    found_data_die
+    unless $game_party.found_enemies.include?(@enemy_id)
+      $game_party.found_enemies.push(@enemy_id)
+    end
+  end
+end #class Game_Battler < Game_BattlerBase
+#==============================================================================
+# ** Game_Actor
+#------------------------------------------------------------------------------
+#  This class handles actors. It is used within the Game_Actors class
+# ($game_actors) and is also referenced from the Game_Party class ($game_party).
+#==============================================================================
+
+class Game_Actor < Game_Battler
+  #--------------------------------------------------------------------------
+  # --Alias method--
+  # * Setup
+  #--------------------------------------------------------------------------
+  alias found_data_setup setup
+  def setup(actor_id)
+    found_data_setup(actor_id)
+    unless $game_party.found_classes.include?(actor.class_id)
+      $game_party.found_classes.push(actor.class_id)
+    end
+  end
+  #--------------------------------------------------------------------------
+  # --Alias method--
+  # * Change Class
+  #     keep_exp:  Keep EXP
+  #--------------------------------------------------------------------------
+  alias found_data_change_class change_class
+  def change_class(class_id)#change_class(class_id, keep_exp = false)
+    found_data_change_class(class_id)#(class_id, keep_exp = false)
+    unless $game_party.found_classes.include?(class_id)
+      $game_party.found_classes.push(class_id)
+    end
+  end
+  #--------------------------------------------------------------------------
+  # --Alias method--
+  # * Learn Skill
+  #--------------------------------------------------------------------------
+  alias found_data_learn_skill learn_skill
+  def learn_skill(skill_id)
+    unless $game_party.found_skills.include?(skill_id)
+      $game_party.found_skills.push(skill_id)
+    end
+    found_data_learn_skill(skill_id)
+  end
+  #--------------------------------------------------------------------------
+  # --Alias method--
+  # * Initialize Equipment
+  #     equips:  An array of initial equipment
+  #--------------------------------------------------------------------------
+  alias found_data_init_equips init_equips
+  def init_equips(equips)
+    found_data_init_equips(equips)
+    equips.each_with_index do |item_id, i|
+      etype_id = index_to_etype_id(i)
+      if etype_id == 0
+        unless $game_party.found_weapons.include?(item_id)
+          $game_party.found_weapons.push(item_id)
+        end
+      else
+        unless $game_party.found_armors.include?(item_id)
+          $game_party.found_armors.push(item_id)
+        end
+      end #if etype_id == 0
+    end #equips.each_with_index do |item_id, i|
+  end #init_equips(equips)
+end #Game_Actor < Game_Battler
+
+#==============================================================================
+# ** Scene_Data
+#------------------------------------------------------------------------------
+#  This class performs the data screen processing.
+#==============================================================================
+class Scene_Data < Scene_ItemBase
+  #--------------------------------------------------------------------------
+  # * Start Processing
+  #--------------------------------------------------------------------------
+  def start
+    super
+    create_help_window
+    create_category_window
+    create_item_window
+    create_info_window
+  end
+  #--------------------------------------------------------------------------
+  # * Create Category Window
+  #--------------------------------------------------------------------------
+  def create_category_window
+    @category_window = Window_DataCategory.new
+    @category_window.viewport = @viewport
+    @category_window.help_window = @help_window
+    @category_window.y = @help_window.height
+    @category_window.set_handler(:ok,     method(:on_category_ok))
+    @category_window.set_handler(:cancel, method(:return_scene))
+  end
+  #--------------------------------------------------------------------------
+  # * Create Item Window
+  #--------------------------------------------------------------------------
+  def create_item_window
+    wy = @category_window.y + @category_window.height
+    wh = Graphics.height - wy
+    @item_window = Window_DataList.new(0, wy, Graphics.width / 2, wh)
+    @item_window.viewport = @viewport
+    @item_window.help_window = @help_window
+    @item_window.set_handler(:cancel, method(:on_item_cancel))
+    @category_window.item_window = @item_window
+  end
+  #--------------------------------------------------------------------------
+  # * Create Info Window
+  #--------------------------------------------------------------------------
+  def create_info_window
+    wy = @category_window.y + @category_window.height
+    wh = Graphics.height - wy
+    @info_window = Window_Info.new(Graphics.width / 2, wy, Graphics.width / 2, wh)
+    @info_window.viewport = @viewport
+    @item_window.info_window = @info_window
+    @info_window.item = nil
+  end
+  #--------------------------------------------------------------------------
+  # * Category [OK]
+  #--------------------------------------------------------------------------
+  def on_category_ok
+    @item_window.activate
+    @item_window.select_last
+    @item_window.refresh
+    @info_window.item = @item_window.item
+    @info_window.refresh
+  end
+  #--------------------------------------------------------------------------
+  # * Item [Cancel]
+  #--------------------------------------------------------------------------
+  def on_item_cancel
+    @item_window.unselect
+    @category_window.activate
+    @info_window.item = nil
+    @info_window.page_index = 0
+    @info_window.refresh
+  end
+end #class Scene_PossessionData < Scene_ItemBase
+#==============================================================================
+# ** Window_MenuCommand
+#------------------------------------------------------------------------------
+#  This command window appears on the menu screen.
+#==============================================================================
+class Window_MenuCommand < Window_Command
+  #--------------------------------------------------------------------------
+  # --Alias Method--
+  # * For Adding Original Commands
+  #--------------------------------------------------------------------------
+  alias data_add_original_commands add_original_commands
+  def add_original_commands
+    data_add_original_commands
+    add_command("Data",   :data,   main_commands_enabled)
+  end
+end #class Window_MenuCommand
+#==============================================================================
+# ** Scene_Menu
+#------------------------------------------------------------------------------
+#  This class performs the menu screen processing.
+#==============================================================================
+class Scene_Menu < Scene_MenuBase
+  #--------------------------------------------------------------------------
+  # --Alias Method--
+  # * Create Command Window
+  #--------------------------------------------------------------------------
+  alias data_create_command_window create_command_window
+  def create_command_window
+    data_create_command_window
+    @command_window.set_handler(:data,      method(:command_data))
+  end
+  #--------------------------------------------------------------------------
+  # --New Method--
+  # * [Data] Command
+  #--------------------------------------------------------------------------
+  def command_data
+    SceneManager.call(Scene_Data)
+  end
+end #class Scene_Menu 
